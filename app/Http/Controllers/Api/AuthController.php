@@ -132,6 +132,10 @@ class AuthController extends Controller
 
     public function updateAvatar(Request $request): JsonResponse
     {
+        Log::info('[UpdateAvatar] Request received');
+        Log::info('[UpdateAvatar] all inputs: ', $request->all());
+        Log::info('[UpdateAvatar] all files: ', $request->allFiles());
+
         $user = auth()->user();
 
         $validator = Validator::make($request->all(), [
@@ -139,6 +143,7 @@ class AuthController extends Controller
         ]);
 
         if ($validator->fails()) {
+            Log::error('[UpdateAvatar] Validation failed', $validator->errors()->toArray());
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
