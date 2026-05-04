@@ -138,14 +138,30 @@ class AuthController extends Controller
 
         $user = auth()->user();
 
+        if ($request->hasFile('avatar')) {
+            $file = $request->file('avatar');
+            Log::info('[UpdateAvatar] File detected: ', [
+                'name' => $file->getClientOriginalName(),
+                'mime' => $file->getMimeType(),
+                'extension' => $file->getClientOriginalExtension(),
+                'size' => $file->getSize(),
+            ]);
+        } else {
+            Log::warning('[UpdateAvatar] No file detected in "avatar" field');
+        }
+
         $validator = Validator::make($request->all(), [
-            'avatar' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'avatar' => 'required|image|mimetypes:image/jpeg,image/png,image/gif,image/webp,image/jpg|max:4096',
         ]);
 
         if ($validator->fails()) {
-            Log::error('[UpdateAvatar] Validation failed', $validator->errors()->toArray());
+            Log::error('[UpdateAvatar] Validation failed', [
+                'errors' => $validator->errors()->toArray(),
+                'input' => $request->all(),
+            ]);
             return response()->json(['errors' => $validator->errors()], 422);
         }
+
 
         if ($request->hasFile('avatar')) {
             $file = $request->file('avatar');
