@@ -21,11 +21,30 @@ class AuctionController extends Controller
     public function index(Request $request): JsonResponse
     {
         $auctionService = new \App\Services\AuctionService();
+        
+        // 1. Activate any pending auctions whose time has come
         $auctionService->activatePending();
 
-        $activeAuctions = Auction::where('status', 'active')->with('product')->get();
-        foreach ($activeAuctions as $auction) {
-            $auctionService->checkAndMarkEnded($auction);
+        // 2. Identify auctions that should be ended but are still active
+        $toEnd = Auction::query()->where('status', 'active')
+            ->where('ends_at', '<=', now())
+            ->with(['product', 'winningBid.user'])
+            ->get();
+        
+        foreach ($toEnd as $auction) {
+            /** @var Auction $auction */
+            $auctionService->endAuction($auction);
+        }
+
+        // 3. Rescue auctions that are marked 'ended' but still have time and no winner
+        $toRescue = Auction::query()->where('status', 'ended')
+            ->where('ends_at', '>', now())
+            ->whereNull('winner_id')
+            ->get();
+        
+        foreach ($toRescue as $auction) {
+            /** @var Auction $auction */
+            $auction->update(['status' => 'active', 'is_active' => true]);
         }
 
         $query = Auction::with(['product:id,name,slug,thumbnail,user_id', 'product.user:id,name', 'winningBid.user:id,name'])
@@ -37,8 +56,8 @@ class AuctionController extends Controller
             case 'ending':
                 $query->where('status', 'active')
                     ->where('ends_at', '>', now())
-                    ->where('ends_at', '<=', now()->addHours(24));
-                $query->orderBy('ends_at', 'asc');
+                    ->where('ends_at', '<=', now()->addHours(24))
+                    ->orderBy('ends_at', 'asc');
                 break;
             case 'new':
                 $query->where('status', 'active')
@@ -46,14 +65,12 @@ class AuctionController extends Controller
                 break;
             case 'finished':
                 $query->where('status', 'ended')
-                    ->where('ends_at', '>', now()->subDays(30));
-                $query->orderBy('ends_at', 'desc');
+                    ->orderBy('ends_at', 'desc');
                 break;
             case 'active':
             default:
                 $query->where('status', 'active')
-                    ->where('ends_at', '>', now());
-                $query->orderBy('ends_at', 'asc');
+                    ->orderBy('ends_at', 'asc');
                 break;
         }
 
