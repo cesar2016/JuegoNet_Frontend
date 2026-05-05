@@ -41,4 +41,4 @@ RUN mkdir -p /var/www/storage/framework/cache/data \
 EXPOSE 8888
 
 # Start command
-CMD php artisan config:clear && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8888
+CMD rm -rf public/storage && php artisan storage:link && php artisan config:clear && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8888
