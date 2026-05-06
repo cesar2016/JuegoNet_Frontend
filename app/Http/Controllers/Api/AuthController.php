@@ -133,48 +133,31 @@ class AuthController extends Controller
     public function updateAvatar(Request $request): JsonResponse
     {
         Log::info('[UpdateAvatar] Request received');
-        Log::info('[UpdateAvatar] all inputs: ', $request->all());
-        Log::info('[UpdateAvatar] all files: ', $request->allFiles());
 
         $user = auth()->user();
 
-        if ($request->hasFile('avatar')) {
-            $file = $request->file('avatar');
-            Log::info('[UpdateAvatar] File detected: ', [
-                'name' => $file->getClientOriginalName(),
-                'mime' => $file->getMimeType(),
-                'extension' => $file->getClientOriginalExtension(),
-                'size' => $file->getSize(),
-            ]);
-        } else {
-            Log::warning('[UpdateAvatar] No file detected in "avatar" field');
-        }
-
         $validator = Validator::make($request->all(), [
-            'avatar' => 'required|image|mimetypes:image/jpeg,image/png,image/gif,image/webp,image/jpg|max:4096',
+            'avatar' => 'required|string',
         ]);
 
         if ($validator->fails()) {
-            Log::error('[UpdateAvatar] Validation failed', [
-                'errors' => $validator->errors()->toArray(),
-                'input' => $request->all(),
-            ]);
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        $avatar = $request->input('avatar');
 
-        if ($request->hasFile('avatar')) {
-            $file = $request->file('avatar');
-            $filename = time() . '_' . $file->getClientOriginalName();
-            $path = $file->storeAs('avatars', $filename, 'public');
-
-            // Delete old avatar if exists and is local
-            if ($user->avatar && str_contains($user->avatar, '/storage/avatars/')) {
-                $oldPath = str_replace('/storage/', '', $user->avatar);
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($oldPath);
+        // Check if it's a base64 image
+        if (str_starts_with($avatar, 'data:image')) {
+            // Validate base64 image size (approx 4MB after decode)
+            $base64 = substr($avatar, strpos($avatar, ',') + 1);
+            $decoded = base64_decode($base64, true);
+            if ($decoded === false || strlen($decoded) > 4096000) {
+                return response()->json(['message' => 'Imagen demasiado grande o inválida'], 422);
             }
-
-            $user->update(['avatar' => '/storage/' . $path]);
+            $user->update(['avatar' => $avatar]);
+        } else {
+            // If it's not base64, just store as is (URL or path)
+            $user->update(['avatar' => $avatar]);
         }
 
         return response()->json([
