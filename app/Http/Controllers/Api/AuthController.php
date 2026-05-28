@@ -77,7 +77,11 @@ class AuthController extends Controller
 
     public function logout(): JsonResponse
     {
-        JWTAuth::invalidate(JWTAuth::getToken());
+        try {
+            JWTAuth::invalidate(JWTAuth::getToken());
+        } catch (\Tymon\JWTAuth\Exceptions\JWTException $e) {
+            // Blacklist disabled — token stays valid but frontend discards it
+        }
 
         return response()->json(['message' => 'Sesión cerrada exitosamente']);
     }
