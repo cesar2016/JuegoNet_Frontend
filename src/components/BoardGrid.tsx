@@ -32,9 +32,6 @@ export default function BoardGrid({ tickets, currentUserId, onSelectNumber, load
       return 'bg-red-500 text-white cursor-not-allowed border-red-600';
     }
     if (ticket.status === 'pending_admin') {
-      return 'bg-orange-400 text-white cursor-not-allowed border-orange-500 opacity-70';
-    }
-    if (ticket.status === 'confirmed') {
       return 'bg-yellow-300 text-gray-800 cursor-not-allowed border-yellow-400 opacity-80';
     }
     if (ticket.status === 'in_cart') {
