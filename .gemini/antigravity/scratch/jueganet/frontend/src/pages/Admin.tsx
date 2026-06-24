@@ -472,8 +472,8 @@ export default function Admin() {
                     <div className="space-y-3">
                       {allOrders.map((item) => {
                         const status = item.order.status;
-                        const cardBg = status === 'confirmed' ? 'bg-yellow-50 border border-yellow-200' : status === 'pending_admin' ? 'bg-orange-50 border border-orange-200' : status === 'sold' ? 'bg-green-50 border border-green-200' : status === 'rejected' ? 'bg-red-50 border border-red-200' : 'bg-gray-50';
-                        const statusLabel = status === 'confirmed' ? 'Confirmada (pendiente de validación)' : status === 'pending_admin' ? 'Pendiente de validación' : status === 'sold' ? 'Vendida' : status === 'rejected' ? 'Rechazada' : status === 'in_cart' ? 'En carrito' : status;
+                        const cardBg = status === 'pending_admin' ? 'bg-yellow-50 border border-yellow-200' : status === 'sold' ? 'bg-green-50 border border-green-200' : status === 'rejected' ? 'bg-red-50 border border-red-200' : 'bg-gray-50';
+                        const statusLabel = status === 'pending_admin' ? 'Pendiente de validación' : status === 'sold' ? 'Vendida' : status === 'rejected' ? 'Rechazada' : status === 'in_cart' ? 'En carrito' : status;
                         const secs = Math.floor(item.remaining_seconds);
                         const m = Math.floor(secs / 60);
                         const s = secs % 60;
@@ -484,20 +484,20 @@ export default function Admin() {
                               <div>
                                 <p className="font-semibold text-gray-800">
                                   {item.order.user.name}
-                                  <span className={`text-xs px-2 py-0.5 rounded ml-1 ${status === 'confirmed' ? 'bg-yellow-100 text-yellow-800' : status === 'pending_admin' ? 'bg-orange-100 text-orange-800' : status === 'sold' ? 'bg-green-100 text-green-800' : status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-200 text-gray-700'}`}>{statusLabel}</span>
+                                  <span className={`text-xs px-2 py-0.5 rounded ml-1 ${status === 'pending_admin' ? 'bg-yellow-100 text-yellow-800' : status === 'sold' ? 'bg-green-100 text-green-800' : status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-200 text-gray-700'}`}>{statusLabel}</span>
                                 </p>
                                 <p className="text-sm text-gray-500">{item.order.user.email}{item.order.raffle ? ` · ${item.order.raffle.name}` : ''}</p>
                                 <p className="text-xs text-gray-400">Creada: {new Date(item.order.created_at).toLocaleString('es-AR')}{item.order.confirmed_at ? ` · Confirmada: ${new Date(item.order.confirmed_at).toLocaleString('es-AR')}` : ''}</p>
                                </div>
                                <div className="text-right">
                                  <p className="text-xl font-bold text-green-700">${parseFloat(item.order.total_price).toLocaleString('es-AR')}</p>
-                                 {(status === 'confirmed' || status === 'pending_admin') && <p className={`text-xs font-mono ${item.remaining_seconds < 120 ? 'text-red-600' : 'text-gray-500'} inline-flex items-center gap-1`}><Clock size={12} /> {remaining}</p>}
+                                 {status === 'pending_admin' && <p className={`text-xs font-mono ${item.remaining_seconds < 120 ? 'text-red-600' : 'text-gray-500'} inline-flex items-center gap-1`}><Clock size={12} /> {remaining}</p>}
                                </div>
                             </div>
                             <div className="flex flex-wrap gap-1 mb-3">
                               {item.order.tickets.map((t) => <span key={t.id} className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold">N° {t.number}</span>)}
                             </div>
-                            {(status === 'confirmed' || status === 'pending_admin') && (
+                            {status === 'pending_admin' && (
                               <div className="flex gap-2">
                                 <button onClick={() => handleApproveOrder(item.order.id)} className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition inline-flex items-center gap-1"><Check size={16} /> Aprobar pago</button>
                                 <button onClick={() => handleRejectOrder(item.order.id)} className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition inline-flex items-center gap-1"><X size={16} /> Rechazar</button>
@@ -617,12 +617,12 @@ export default function Admin() {
                               const posMap = new Map<number, number>();
                               winners?.forEach((w) => posMap.set(w.number, w.position));
                               return p.tickets.map((t) => {
-                                const pos = posMap.get(t.number);
-                                const isWinner = pos !== undefined;
-                                 const statusTip = t.status === 'sold' ? 'Vendido' : t.status === 'confirmed' ? 'Confirmada (pendiente de validación)' : t.status === 'pending_admin' ? 'Esperando validación' : 'En carrito';
+                                 const pos = posMap.get(t.number);
+                                 const isWinner = pos !== undefined;
+                                 const statusTip = t.status === 'sold' ? 'Vendido' : t.status === 'pending_admin' ? 'Esperando validación' : 'En carrito';
                                  return (
                                    <Tooltip key={t.id} text={`N° ${t.number} - ${statusTip}${isWinner ? ` 🏆 Puesto N°${pos}` : ''}`}>
-                                     <span className={`relative inline-block px-2 py-1 rounded text-xs font-semibold ${isWinner ? 'bg-yellow-300 text-yellow-900 ring-2 ring-yellow-500' : t.status === 'sold' ? 'bg-green-100 text-green-800' : t.status === 'confirmed' ? 'bg-yellow-100 text-yellow-800' : t.status === 'pending_admin' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'}`}>
+                                     <span className={`relative inline-block px-2 py-1 rounded text-xs font-semibold ${isWinner ? 'bg-yellow-300 text-yellow-900 ring-2 ring-yellow-500' : t.status === 'sold' ? 'bg-green-100 text-green-800' : t.status === 'pending_admin' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
                                       N° {t.number}
                                       {isWinner && <span className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-sky-400 text-white flex items-center justify-center text-[10px] font-bold leading-none shadow">{pos}</span>}
                                     </span>

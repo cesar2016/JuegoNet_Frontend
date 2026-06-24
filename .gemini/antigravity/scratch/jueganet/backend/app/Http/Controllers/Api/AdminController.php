@@ -47,7 +47,7 @@ class AdminController extends Controller
     {
         $this->releaseExpiredPendingOrders();
 
-        $orders = Order::where('status', 'confirmed')
+        $orders = Order::where('status', 'pending_admin')
             ->with('user', 'raffle', 'tickets')
             ->orderBy('confirmed_at', 'asc')
             ->get()
@@ -69,7 +69,7 @@ class AdminController extends Controller
 
     public function approveOrder(Order $order): JsonResponse
     {
-        if ($order->status !== 'confirmed') {
+        if ($order->status !== 'pending_admin') {
             return response()->json(['message' => 'La orden no está pendiente de validación.'], 400);
         }
 
@@ -86,7 +86,7 @@ class AdminController extends Controller
 
     public function rejectOrder(Order $order): JsonResponse
     {
-        if ($order->status !== 'confirmed') {
+        if ($order->status !== 'pending_admin') {
             return response()->json(['message' => 'La orden no está pendiente de validación.'], 400);
         }
 
@@ -108,7 +108,7 @@ class AdminController extends Controller
 
     private function releaseExpiredPendingOrders(): void
     {
-        $expired = Order::where('status', 'confirmed')
+        $expired = Order::where('status', 'pending_admin')
             ->where('confirmed_at', '<=', now()->subMinutes(15))
             ->get();
 
@@ -145,7 +145,7 @@ class AdminController extends Controller
 
         $status = $request->input('status', 'all');
         if ($status === 'ongoing') {
-            $query->where('status', 'confirmed');
+                $query->where('status', 'pending_admin');
         } elseif ($status === 'finished') {
             $query->whereIn('status', ['sold', 'rejected']);
         } elseif ($status !== 'all') {

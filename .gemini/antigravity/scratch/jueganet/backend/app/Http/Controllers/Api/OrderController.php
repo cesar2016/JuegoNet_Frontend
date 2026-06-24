@@ -66,7 +66,7 @@ class OrderController extends Controller
         $user = $request->user();
 
         $participatingRaffles = Order::where('user_id', $user->id)
-            ->whereIn('status', ['in_cart', 'pending_admin', 'sold', 'confirmed'])
+            ->whereIn('status', ['in_cart', 'pending_admin', 'sold'])
             ->pluck('raffle_id')
             ->unique();
 
@@ -189,11 +189,11 @@ class OrderController extends Controller
             $now = now();
 
             $cart->update([
-                'status' => 'confirmed',
+                'status' => 'pending_admin',
                 'confirmed_at' => $now,
             ]);
 
-            $cart->tickets()->update(['status' => 'confirmed']);
+            $cart->tickets()->update(['status' => 'pending_admin']);
 
             return response()->json([
                 'message' => 'Compra confirmada. Espera la validación del administrador.',

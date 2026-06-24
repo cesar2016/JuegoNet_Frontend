@@ -103,7 +103,7 @@ class RaffleController extends Controller
     public function all(): JsonResponse
     {
         $raffles = Raffle::orderBy('created_at', 'desc')->get()->map(function (Raffle $r) {
-            $hasBets = $r->tickets()->whereIn('status', ['in_cart', 'pending_admin', 'sold', 'confirmed'])->exists();
+            $hasBets = $r->tickets()->whereIn('status', ['in_cart', 'pending_admin', 'sold'])->exists();
             $canEdit = now()->lessThan($r->start_time) && !$hasBets;
             return [
                 'id' => $r->id,
@@ -190,7 +190,7 @@ class RaffleController extends Controller
     private function hasBets(Raffle $raffle): bool
     {
         return $raffle->tickets()
-            ->whereIn('status', ['in_cart', 'pending_admin', 'sold', 'confirmed'])
+            ->whereIn('status', ['in_cart', 'pending_admin', 'sold'])
             ->exists();
     }
 
@@ -306,7 +306,7 @@ class RaffleController extends Controller
     {
         $tickets = $raffle->tickets()
             ->with('user:id,name,email,avatar,whatsapp')
-            ->whereIn('status', ['sold', 'pending_admin', 'in_cart', 'confirmed'])
+            ->whereIn('status', ['sold', 'pending_admin', 'in_cart'])
             ->whereNotNull('user_id')
             ->orderBy('number')
             ->get();
@@ -344,7 +344,7 @@ class RaffleController extends Controller
             ]);
 
         $expiredPendingOrders = $raffle->orders()
-            ->where('status', 'confirmed')
+            ->where('status', 'pending_admin')
             ->where('confirmed_at', '<=', $now->copy()->subMinutes(15))
             ->get();
 
