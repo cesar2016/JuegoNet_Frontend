@@ -17,7 +17,7 @@ Monorepo: `backend/` (Laravel 13 API) + `frontend/` (React 19 + Vite 8 + Tailwin
 - **Profile**: two endpoints (`PUT /profile` and `POST /profile/update`) both call `AuthController::updateProfile`.
 - **Avatar upload**: `POST /upload-avatar` (user) and `POST /admin/upload-avatar` (admin), same `AdminController@uploadAvatar`. Accepts image (max 2MB), stores under `public/avatars/`.
 - **Drivers**: dev uses `SESSION_DRIVER=database`, `CACHE_STORE=database`, `QUEUE_CONNECTION=database` (needs queue worker). Prod `.env.example` uses `QUEUE_CONNECTION=sync`, `CACHE_STORE=file`. Test uses `array`/`sync`/`sqlite:memory:`.
-- **Prod entry**: `Procfile` → `start.sh` → `php artisan optimize && migrate --force && reverb:start (if REVERB_HOST set) & serve --host=0.0.0.0 --port=${PORT:-8080}`.
+- **Prod entry**: `Procfile` → `start.sh` → `php artisan optimize && migrate --force && reverb:start (if REVERB_HOST set, binds on REVERB_SERVER_PORT) & serve --host=0.0.0.0 --port=${PORT:-8080}`.
 - **Real-time (Laravel Reverb)**: installed, replaces all 5s polling. Events: `TicketStatusChanged` (channel `raffle.{id}`), `OrderStatusChanged` (channel `user.{id}`), `AdminNotification` (channel `admin.{id}`, types: `new_pending_order`, `pending_users_updated`, `raffle_list_updated`). Dev runs Reverb on `0.0.0.0:8080`. Frontend Echo config in `src/lib/echo.ts` with graceful degradation.
 - **Timezone**: `America/Argentina/Buenos_Aires`.
 - **.env** committed with dev creds. `.env.example` is prod template — keep in sync.
