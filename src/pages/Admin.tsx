@@ -1,20 +1,21 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import api from '../lib/api';
+import { getEcho } from '../lib/echo';
 import Tooltip from '../components/Tooltip';
 import Switch from '../components/Switch';
 import EditRaffleModal from '../components/EditRaffleModal';
 import ConfirmModal from '../components/ConfirmModal';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { Settings, Users, FileText, Dice5, Search, Check, X, Clock, ArrowLeft, Trophy, Zap, PenLine, Trash2, Pencil as PencilIcon } from 'lucide-react';
+import { Settings, Users, FileText, Dice5, Search, Check, X, Clock, ArrowLeft, Trophy, PenLine, Trash2, Pencil as PencilIcon, Eye, ShoppingCart, Link2, Copy, UserPlus } from 'lucide-react';
 
 interface AllUser { id: number; name: string; email: string; whatsapp: string | null; status: string; role: string; created_at: string; }
 interface PaginatedUsers { data: AllUser[]; current_page: number; last_page: number; per_page: number; total: number; from: number | null; to: number | null; }
 interface OrderItem { order: { id: number; total_price: string; status: string; confirmed_at: string | null; user: { name: string; email: string }; raffle: { id: number; name: string } | null; tickets: { id: number; number: number }[]; created_at: string; }; remaining_seconds: number; }
 interface PaginatedOrders { data: OrderItem[]; current_page: number; last_page: number; per_page: number; total: number; from: number | null; to: number | null; }
-interface Raffle { id: number; name: string; is_active: boolean; start_time: string; end_time: string; ticket_price: string; prizes_count: number; winning_numbers: number[] | null; drawn_at: string | null; can_edit?: boolean; }
+interface Raffle { id: number; name: string; is_active: boolean; start_time: string; end_time: string; ticket_price: string; prizes_count: number; cart_expiry_minutes?: number; winning_numbers: number[] | null; drawn_at: string | null; can_edit?: boolean; }
 interface ParticipantTicket { id: number; number: number; status: string; }
 interface Participant { user: { id: number; name: string; email: string; avatar: string | null; whatsapp: string | null }; tickets: ParticipantTicket[]; }
 interface Winner { position: number; number: number; user: { id: number; name: string; email: string; avatar: string | null; whatsapp: string | null } | null; }
@@ -22,7 +23,8 @@ interface Winner { position: number; number: number; user: { id: number; name: s
 export default function Admin() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'users' | 'orders' | 'raffles'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'orders' | 'raffles'>(() => (localStorage.getItem('adminTab') as 'users' | 'orders' | 'raffles') || 'users');
+  const handleTabChange = (tab: 'users' | 'orders' | 'raffles') => { setActiveTab(tab); localStorage.setItem('adminTab', tab); };
   const [allUsers, setAllUsers] = useState<AllUser[]>([]);
   const [userPage, setUserPage] = useState(1);
   const [userPerPage, setUserPerPage] = useState(10);
@@ -44,7 +46,7 @@ export default function Admin() {
   const [orderStatusFilter, setOrderStatusFilter] = useState('ongoing');
   const [orderSearchInput, setOrderSearchInput] = useState('');
   const [raffles, setRaffles] = useState<Raffle[]>([]);
-  const [raffleForm, setRaffleForm] = useState({ name: '', ticket_price: '', start_time: '', end_time: '', prizes_count: '1' });
+  const [raffleForm, setRaffleForm] = useState({ name: '', ticket_price: '', start_time: '', end_time: '', prizes_count: '1', cart_expiry_minutes: '10' });
   const [selectedRaffle, setSelectedRaffle] = useState<Raffle | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [winners, setWinners] = useState<Winner[] | null>(null);
@@ -54,11 +56,52 @@ export default function Admin() {
   const [editRaffle, setEditRaffle] = useState<Raffle | null>(null);
   const [deleteRaffleId, setDeleteRaffleId] = useState<number | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [orderBadgeCount, setOrderBadgeCount] = useState(0);
+  const [userBadgeCount, setUserBadgeCount] = useState(0);
+  const [now, setNow] = useState(Date.now());
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const refreshBadges = useCallback(async () => {
+    try {
+      const [pendingRes, cartRes, pendingUsersRes] = await Promise.all([
+        api.get<PaginatedOrders>('/admin/orders?status=pending_admin&per_page=1'),
+        api.get<PaginatedOrders>('/admin/orders?status=in_cart&per_page=1'),
+        api.get<PaginatedUsers>('/admin/users?status=pending_approval&per_page=1'),
+      ]);
+      setOrderBadgeCount(pendingRes.total + cartRes.total);
+      setUserBadgeCount(pendingUsersRes.total);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    refreshBadges();
+    const echo = getEcho();
+    const channel = echo.private(`admin.${user.id}`);
+    const handler = (e: { type: string }) => {
+      if (e.type === 'new_pending_order' || e.type === 'raffle_list_updated') {
+        refreshBadges();
+        if (activeTab === 'orders') fetchData();
+      } else if (e.type === 'pending_users_updated') {
+        refreshBadges();
+        if (activeTab === 'users') fetchData();
+      }
+    };
+    channel.listen('AdminNotification', handler);
+    return () => { channel.stopListening('AdminNotification'); };
+  }, [user, activeTab]);
 
   useEffect(() => {
     if (authLoading) return;
     if (!user) { navigate('/'); return; }
-    if (user.role !== 'super_admin') { navigate('/dashboard'); return; }
+    if (user.role !== 'super_admin' && user.role !== 'admin') { navigate('/dashboard'); return; }
   }, [user, authLoading, navigate]);
 
   const fetchData = async () => {
@@ -123,28 +166,15 @@ export default function Admin() {
   useEffect(() => {
     if (activeTab !== 'orders') return;
     fetchData();
-  }, [orderPage, orderPerPage, orderSearch, orderStatusFilter]);
-
-  const ordersExpiredRef = useRef(false);
+  }, [activeTab, orderPage, orderPerPage, orderSearch, orderStatusFilter]);
 
   useEffect(() => {
-    if (activeTab !== 'orders') return;
-    ordersExpiredRef.current = false;
-    const interval = setInterval(() => {
-      setAllOrders((prev) => {
-        const hasExpired = prev.some((item) => item.remaining_seconds === 1);
-        if (hasExpired && !ordersExpiredRef.current) {
-          ordersExpiredRef.current = true;
-          setTimeout(() => window.location.reload(), 500);
-        }
-        return prev.map((item) => ({
-          ...item,
-          remaining_seconds: Math.max(0, item.remaining_seconds - 1),
-        }));
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [activeTab]);
+    if (activeTab !== 'users') return;
+    api.get<{ url: string | null }>('/admin/invite/latest').then(res => {
+      if (res.url) setInviteUrl(res.url);
+    }).catch(() => {});
+    fetchData();
+  }, [activeTab, userPage, userPerPage, userSearch, userStatusFilter]);
 
   const handleUserSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,6 +190,26 @@ export default function Admin() {
   const handleUserPerPageChange = (value: number) => {
     setUserPage(1);
     setUserPerPage(value);
+  };
+
+  const handleGenerateInvite = async () => {
+    setInviteLoading(true);
+    try {
+      const res = await api.post<{ url: string }>('/admin/invite');
+      setInviteUrl(res.url);
+      setCopied(false);
+    } catch {
+      toast.error('Error al generar enlace');
+    }
+    setInviteLoading(false);
+  };
+
+  const handleCopyInvite = () => {
+    if (!inviteUrl) return;
+    navigator.clipboard.writeText(inviteUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    toast.success('Enlace copiado al portapapeles');
   };
 
   const handleOrderSearchSubmit = (e: React.FormEvent) => {
@@ -260,7 +310,7 @@ export default function Admin() {
     try {
       await api.post('/raffles', raffleForm);
       toast.success('Sorteo creado correctamente.');
-      setRaffleForm({ name: '', ticket_price: '', start_time: '', end_time: '', prizes_count: '1' });
+      setRaffleForm({ name: '', ticket_price: '', start_time: '', end_time: '', prizes_count: '1', cart_expiry_minutes: '10' });
       fetchData();
     } catch (err: unknown) {
       const apiErr = err as { data?: { message?: string } };
@@ -283,17 +333,6 @@ export default function Admin() {
     } catch (err: unknown) {
       const apiErr = err as { data?: { message?: string } };
       toast.error(apiErr.data?.message || 'Error al declarar resultados');
-    }
-  };
-
-  const handleActivateRaffle = async (id: number) => {
-    try {
-      await api.post(`/admin/raffles/${id}/activate`);
-      toast.success('Sorteo activado.');
-      fetchData();
-    } catch (err: unknown) {
-      const apiErr = err as { data?: { message?: string } };
-      toast.error(apiErr.data?.message || 'Error al activar sorteo');
     }
   };
 
@@ -334,9 +373,9 @@ export default function Admin() {
 
         <div className="flex gap-2 mb-6">
           {(['users', 'orders', 'raffles'] as const).map((tab) => (
-            <button key={tab} onClick={() => setActiveTab(tab)}
+            <button key={tab} onClick={() => handleTabChange(tab)}
               className={`flex-1 sm:flex-none px-2 sm:px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm transition truncate ${activeTab === tab ? 'bg-white text-green-700 shadow-lg' : 'bg-white/20 text-white hover:bg-white/30'}`}>
-              {tab === 'users' ? <span className="inline-flex items-center gap-2"><Users size={18} /> Usuarios</span> : tab === 'orders' ? <span className="inline-flex items-center gap-2"><FileText size={18} /> Órdenes</span> : <span className="inline-flex items-center gap-2"><Dice5 size={18} /> Sorteos</span>}
+              {tab === 'users' ? <span className="inline-flex items-center gap-2 relative"><Users size={18} /> Usuarios{userBadgeCount > 0 && <span className="absolute -top-2 -right-3 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">{userBadgeCount}</span>}</span> : tab === 'orders' ? <span className="inline-flex items-center gap-2 relative"><FileText size={18} /> Órdenes{orderBadgeCount > 0 && <span className="absolute -top-2 -right-3 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">{orderBadgeCount}</span>}</span> : <span className="inline-flex items-center gap-2"><Dice5 size={18} /> Sorteos</span>}
             </button>
           ))}
         </div>
@@ -363,7 +402,19 @@ export default function Admin() {
                 <Tooltip text="Ejecutar búsqueda">
                   <button type="button" onClick={() => { setUserPage(1); setUserSearch(searchInput); }} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition inline-flex items-center gap-2"><Search size={16} /> Buscar</button>
                 </Tooltip>
+                <Tooltip text="Generar enlace de registro para nuevos usuarios">
+                  <button type="button" onClick={handleGenerateInvite} disabled={inviteLoading} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition inline-flex items-center gap-2"><UserPlus size={16} /> {inviteLoading ? 'Generando...' : 'Crear usuario'}</button>
+                </Tooltip>
               </div>
+              {inviteUrl && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-3">
+                  <Link2 size={18} className="text-blue-600 shrink-0" />
+                  <span className="text-sm text-blue-800 break-all flex-1">{inviteUrl}</span>
+                  <Tooltip text="Copiar enlace">
+                    <button type="button" onClick={handleCopyInvite} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition inline-flex items-center gap-1 shrink-0"><Copy size={14} /> {copied ? 'Copiado' : 'Copiar'}</button>
+                  </Tooltip>
+                </div>
+              )}
 
               {loading ? <p className="text-gray-500">Cargando...</p> : (
                 <>
@@ -472,11 +523,12 @@ export default function Admin() {
                     <div className="space-y-3">
                       {allOrders.map((item) => {
                         const status = item.order.status;
-                        const cardBg = status === 'pending_admin' ? 'bg-yellow-50 border border-yellow-200' : status === 'sold' ? 'bg-green-50 border border-green-200' : status === 'rejected' ? 'bg-red-50 border border-red-200' : 'bg-gray-50';
+                        const cardBg = status === 'pending_admin' || status === 'in_cart' ? 'bg-yellow-50 border border-yellow-200' : status === 'sold' ? 'bg-green-50 border border-green-200' : status === 'rejected' ? 'bg-red-50 border border-red-200' : 'bg-gray-50';
                         const statusLabel = status === 'pending_admin' ? 'Pendiente de validación' : status === 'sold' ? 'Vendida' : status === 'rejected' ? 'Rechazada' : status === 'in_cart' ? 'En carrito' : status;
-                        const secs = Math.floor(item.remaining_seconds);
-                        const m = Math.floor(secs / 60);
-                        const s = secs % 60;
+                        const confirmedAt = item.order.confirmed_at ? new Date(item.order.confirmed_at).getTime() : 0;
+                        const remainingSecs = Math.max(0, Math.floor((confirmedAt + 15 * 60 * 1000 - now) / 1000));
+                        const m = Math.floor(remainingSecs / 60);
+                        const s = remainingSecs % 60;
                         const remaining = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
                         return (
                           <div key={item.order.id} className={`rounded-lg p-4 ${cardBg}`}>
@@ -484,14 +536,14 @@ export default function Admin() {
                               <div>
                                 <p className="font-semibold text-gray-800">
                                   {item.order.user.name}
-                                  <span className={`text-xs px-2 py-0.5 rounded ml-1 ${status === 'pending_admin' ? 'bg-yellow-100 text-yellow-800' : status === 'sold' ? 'bg-green-100 text-green-800' : status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-200 text-gray-700'}`}>{statusLabel}</span>
+                                  <span className={`text-xs px-2 py-0.5 rounded ml-1 inline-flex items-center gap-1 ${status === 'pending_admin' ? 'bg-yellow-100 text-yellow-800' : status === 'in_cart' ? 'bg-yellow-100 text-black' : status === 'sold' ? 'bg-green-100 text-green-800' : status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-200 text-gray-700'}`}>{status === 'in_cart' && <ShoppingCart size={12} />}{statusLabel}</span>
                                 </p>
                                 <p className="text-sm text-gray-500">{item.order.user.email}{item.order.raffle ? ` · ${item.order.raffle.name}` : ''}</p>
                                 <p className="text-xs text-gray-400">Creada: {new Date(item.order.created_at).toLocaleString('es-AR')}{item.order.confirmed_at ? ` · Confirmada: ${new Date(item.order.confirmed_at).toLocaleString('es-AR')}` : ''}</p>
                                </div>
                                <div className="text-right">
                                  <p className="text-xl font-bold text-green-700">${parseFloat(item.order.total_price).toLocaleString('es-AR')}</p>
-                                 {status === 'pending_admin' && <p className={`text-xs font-mono ${item.remaining_seconds < 120 ? 'text-red-600' : 'text-gray-500'} inline-flex items-center gap-1`}><Clock size={12} /> {remaining}</p>}
+                                  {status === 'pending_admin' && <p className={`text-lg font-bold font-mono ${remainingSecs < 120 ? 'text-red-600' : 'text-gray-700'} inline-flex items-center gap-2`}><Clock size={20} className={remainingSecs < 120 ? 'text-red-500' : 'text-gray-500'} /> {remaining}</p>}
                                </div>
                             </div>
                             <div className="flex flex-wrap gap-1 mb-3">
@@ -653,7 +705,7 @@ export default function Admin() {
                       <input type="text" value={raffleForm.name} onChange={(e) => setRaffleForm({ ...raffleForm, name: e.target.value })} placeholder="Nombre del sorteo" className="px-4 py-2 rounded-lg border border-gray-300 outline-none" required />
                       <input type="number" step="0.01" value={raffleForm.ticket_price} onChange={(e) => setRaffleForm({ ...raffleForm, ticket_price: e.target.value })} placeholder="Precio por número" className="px-4 py-2 rounded-lg border border-gray-300 outline-none" required />
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                       <div>
                         <label className="block text-xs text-gray-500 mb-1 font-semibold">Desde (inicio)</label>
                         <input type="datetime-local" value={raffleForm.start_time} onChange={(e) => setRaffleForm({ ...raffleForm, start_time: e.target.value })} className="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none" required />
@@ -668,6 +720,10 @@ export default function Admin() {
                           {[1,2,3,4,5,6,7,8,9,10].map((n) => <option key={n} value={n}>{n} {n === 1 ? 'premio' : 'premios'}</option>)}
                         </select>
                       </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1 font-semibold">Exp. carrito (min)</label>
+                        <input type="number" min="1" max="120" value={raffleForm.cart_expiry_minutes} onChange={(e) => setRaffleForm({ ...raffleForm, cart_expiry_minutes: e.target.value })} className="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none" />
+                      </div>
                     </div>
                     <Tooltip text="Crear un nuevo sorteo con los datos ingresados"><button type="submit" className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg transition inline-flex items-center gap-2"><PenLine size={18} /> Crear sorteo</button></Tooltip>
                   </form>
@@ -678,15 +734,10 @@ export default function Admin() {
                         <div key={r.id} className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 bg-gray-50 rounded-lg p-4">
                           <div className="min-w-0">
                             <p className="font-semibold text-gray-800 break-words">{r.name}</p>
-                            <p className="text-sm text-gray-500 break-words">Estado: {r.is_active ? 'Activo' : 'Inactivo'} | Precio: ${r.ticket_price} | Premios: {r.prizes_count} | Inicio: {new Date(r.start_time).toLocaleString('es-AR')} | Fin: {new Date(r.end_time).toLocaleString('es-AR')} {r.drawn_at ? <span className="inline-flex items-center gap-1">| <Check className="text-green-600" size={14} /> Sorteado</span> : ''}</p>
+                            <p className="text-sm text-gray-500 break-words">Estado: {r.is_active ? 'Activo' : 'Inactivo'} | Precio: ${r.ticket_price} | Premios: {r.prizes_count} | Exp. carrito: {r.cart_expiry_minutes ?? 10} min | Inicio: {new Date(r.start_time).toLocaleString('es-AR')} | Fin: {new Date(r.end_time).toLocaleString('es-AR')} {r.drawn_at ? <span className="inline-flex items-center gap-1">| <Check className="text-green-600" size={14} /> Sorteado</span> : ''}</p>
                           </div>
                           <div className="flex flex-wrap gap-2">
-                            <Tooltip text="Ver todos los participantes y sus números comprados"><button onClick={() => handleViewParticipants(r)} className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition inline-flex items-center gap-1"><Users size={16} /> Ver participantes</button></Tooltip>
-                            {!r.is_active && !r.drawn_at && (
-                              raffles.filter((x) => x.is_active).length >= 5
-                                ? <Tooltip text="Límite de 5 sorteos activos en simultáneo alcanzado"><button disabled className="bg-gray-300 text-gray-500 px-4 py-2 rounded-lg text-sm font-semibold cursor-not-allowed inline-flex items-center gap-1"><Zap size={16} /> Activar</button></Tooltip>
-                                : <Tooltip text="Activar sorteo para que los usuarios puedan comprar números"><button onClick={() => handleActivateRaffle(r.id)} className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition inline-flex items-center gap-1"><Zap size={16} /> Activar</button></Tooltip>
-                            )}
+                            <Tooltip text="Ver participantes"><button onClick={() => handleViewParticipants(r)} className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-lg transition inline-flex items-center justify-center"><Eye size={16} /></button></Tooltip>
                             {r.can_edit && (
                               <>
                                 <Tooltip text="Editar sorteo (solo si no empezó y no tiene apuestas)"><button onClick={() => handleOpenEditRaffle(r)} className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition inline-flex items-center gap-1"><PencilIcon size={16} /> Editar</button></Tooltip>

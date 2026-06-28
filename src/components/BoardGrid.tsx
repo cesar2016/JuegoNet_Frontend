@@ -1,4 +1,5 @@
 import Tooltip from './Tooltip';
+import { ShoppingCart, Clock } from 'lucide-react';
 
 interface TicketUser {
   name: string;
@@ -25,21 +26,18 @@ export default function BoardGrid({ tickets, currentUserId, onSelectNumber, load
   const isOtherUser = (ticket: Ticket) => ticket.user_id && ticket.user_id !== currentUserId;
 
     const getTicketStyle = (ticket: Ticket) => {
-    if (isOtherUser(ticket)) {
-      return 'bg-[oklch(0.62_0.03_17.62)] text-white cursor-not-allowed border-[oklch(0.66_0.17_21.5)]';
+    if (ticket.status === 'pending_admin' || ticket.status === 'in_cart') {
+      return 'bg-gray-300/50 text-black border-gray-400/50 cursor-not-allowed';
     }
     if (ticket.status === 'sold') {
+      if (isOtherUser(ticket)) {
+        return 'bg-transparent text-white border-white opacity-70 cursor-not-allowed';
+      }
       return 'bg-red-500 text-white cursor-not-allowed border-red-600';
-    }
-    if (ticket.status === 'pending_admin') {
-      return 'bg-yellow-300 text-gray-800 cursor-not-allowed border-yellow-400 opacity-80';
-    }
-    if (ticket.status === 'in_cart') {
-      return 'bg-red-500 text-white border-red-600';
     }
     return readOnly
       ? 'bg-white text-black cursor-not-allowed border-gray-200'
-      : 'bg-white hover:bg-purple-100 text-gray-800 cursor-pointer border-gray-300 hover:border-purple-500 hover:shadow-md';
+      : 'bg-white text-gray-800 cursor-pointer border-gray-300 hover:border-yellow-500 hover:shadow-lg hover:shadow-yellow-500/40 hover:scale-110';
   };
 
   return (
@@ -56,6 +54,16 @@ export default function BoardGrid({ tickets, currentUserId, onSelectNumber, load
             `}
           >
             <span className="text-2xl sm:text-3xl md:text-4xl leading-none tabular-nums">{String(ticket.number).padStart(2, '0')}</span>
+            {ticket.status === 'in_cart' && (
+              <div className="absolute -bottom-2 -left-2 bg-sky-300 rounded-full p-1 flex items-center justify-center">
+                <ShoppingCart size={14} className="text-black" />
+              </div>
+            )}
+            {ticket.status === 'pending_admin' && (
+              <div className="absolute -bottom-2 -left-2 bg-yellow-300 rounded-full p-1 flex items-center justify-center">
+                <Clock size={14} className="text-black" />
+              </div>
+            )}
             {ticket.user && (
               <div className="absolute -top-2 -right-2">
                 {ticket.user?.avatar ? (
