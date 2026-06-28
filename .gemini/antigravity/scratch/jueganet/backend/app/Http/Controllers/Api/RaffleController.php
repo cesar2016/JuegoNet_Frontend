@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\AdminNotification;
 use App\Http\Controllers\Controller;
+use App\Models\Order;
 use App\Models\Raffle;
 use App\Models\Ticket;
 use Illuminate\Http\JsonResponse;
@@ -11,18 +13,35 @@ use Illuminate\Support\Facades\DB;
 
 class RaffleController extends Controller
 {
-    public function index(): JsonResponse
+    private function scopeForUser($query, Request $request)
+    {
+        $user = $request->user();
+        if (! $user) {
+            return $query;
+        }
+
+        if ($user->isAdmin() && ! $user->isSuperAdmin()) {
+            $query->where('admin_id', $user->id);
+        } elseif ($user->admin_id) {
+            $query->where('admin_id', $user->admin_id);
+        }
+
+        return $query;
+    }
+
+    public function index(Request $request): JsonResponse
     {
         Raffle::where('is_active', true)
             ->where(function ($q) {
                 $q->where('end_time', '<=', now())
-                  ->orWhereNotNull('drawn_at');
+                    ->orWhereNotNull('drawn_at');
             })
             ->update(['is_active' => false]);
 
-        $raffles = Raffle::where('is_active', true)
-            ->orderBy('end_time', 'desc')
-            ->get();
+        $query = Raffle::where('is_active', true);
+        $this->scopeForUser($query, $request);
+
+        $raffles = $query->orderBy('end_time', 'desc')->get();
 
         return response()->json($raffles);
     }
@@ -32,24 +51,28 @@ class RaffleController extends Controller
         $from = $request->input('from', now()->subHours(48));
         $to = $request->input('to', now());
 
-        $raffles = Raffle::whereNotNull('drawn_at')
+        $query = Raffle::whereNotNull('drawn_at')
             ->where('drawn_at', '>=', $from)
-            ->where('drawn_at', '<=', $to)
-            ->orderBy('drawn_at', 'desc')
-            ->get();
+            ->where('drawn_at', '<=', $to);
+        $this->scopeForUser($query, $request);
+
+        $raffles = $query->orderBy('drawn_at', 'desc')->get();
 
         return response()->json($raffles);
     }
 
-    public function active(): JsonResponse
+    public function active(Request $request): JsonResponse
     {
         $now = now();
-        $raffle = Raffle::where('is_active', true)
-            ->where('start_time', '<=', $now)
-            ->where('end_time', '>=', $now)
-            ->first();
 
-        if (!$raffle) {
+        $query = Raffle::where('is_active', true)
+            ->where('start_time', '<=', $now)
+            ->where('end_time', '>=', $now);
+        $this->scopeForUser($query, $request);
+
+        $raffle = $query->first();
+
+        if (! $raffle) {
             return response()->json(['message' => 'No hay sorteos activos.'], 404);
         }
 
@@ -65,9 +88,10 @@ class RaffleController extends Controller
             'duration_hours' => 'nullable|numeric|min:1',
             'ticket_price' => 'required|numeric|min:0',
             'prizes_count' => 'nullable|integer|min:1|max:10',
+            'cart_expiry_minutes' => 'nullable|integer|min:1|max:120',
         ]);
 
-        if (!($validated['start_time'] ?? null)) {
+        if (! ($validated['start_time'] ?? null)) {
             $validated['start_time'] = now();
             $validated['end_time'] = now()->addHours((int) ($validated['duration_hours'] ?? 1));
         }
@@ -75,10 +99,11 @@ class RaffleController extends Controller
         $validated['prizes_count'] ??= 1;
         unset($validated['duration_hours']);
 
-        $raffle = DB::transaction(function () use ($validated) {
+        $raffle = DB::transaction(function () use ($validated, $request) {
             $raffle = Raffle::create([
                 ...$validated,
-                'is_active' => false,
+                'is_active' => true,
+                'admin_id' => $request->user()->id,
             ]);
 
             for ($i = 1; $i <= 99; $i++) {
@@ -92,19 +117,124 @@ class RaffleController extends Controller
             return $raffle;
         });
 
+        broadcast(new AdminNotification($request->user()->id, 'raffle_list_updated'));
+
         return response()->json($raffle, 201);
     }
 
-    public function show(Raffle $raffle): JsonResponse
+    public function show(Request $request, Raffle $raffle): JsonResponse
     {
+        $this->authorizeRaffleForUser($request, $raffle);
+
         return response()->json($raffle);
     }
 
-    public function all(): JsonResponse
+    public function board(Request $request, Raffle $raffle): JsonResponse
     {
-        $raffles = Raffle::orderBy('created_at', 'desc')->get()->map(function (Raffle $r) {
+        $this->authorizeRaffleForUser($request, $raffle);
+        $this->releaseExpiredTickets($raffle);
+
+        $tickets = $raffle->tickets()
+            ->with('user:id,name,avatar')
+            ->orderBy('number')
+            ->get()
+            ->map(function ($ticket) {
+                return [
+                    'id' => $ticket->id,
+                    'number' => $ticket->number,
+                    'status' => $ticket->status,
+                    'user_id' => $ticket->user_id,
+                    'user' => $ticket->user ? [
+                        'name' => $ticket->user->name,
+                        'avatar' => $ticket->user->avatar,
+                    ] : null,
+                    'reserved_at' => $ticket->reserved_at,
+                ];
+            });
+
+        return response()->json([
+            'raffle' => $raffle,
+            'tickets' => $tickets,
+        ]);
+    }
+
+    public function results(Request $request, Raffle $raffle): JsonResponse
+    {
+        $user = $request->user();
+        if ($user && $user->isAdmin() && ! $user->isSuperAdmin() && $raffle->admin_id !== $user->id) {
+            return response()->json(['message' => 'No tienes permisos para ver los resultados de este sorteo.'], 403);
+        }
+
+        if (! $raffle->winning_numbers) {
+            return response()->json(['message' => 'Este sorteo aún no tiene resultados.'], 404);
+        }
+
+        $tickets = $raffle->tickets()
+            ->with('user:id,name,email,avatar,whatsapp')
+            ->whereIn('status', ['sold'])
+            ->get()
+            ->keyBy('number');
+
+        $winners = [];
+        foreach ($raffle->winning_numbers as $position => $number) {
+            $ticket = $tickets->get($number);
+            $winners[] = [
+                'position' => $position + 1,
+                'number' => $number,
+                'user' => $ticket?->user ? [
+                    'id' => $ticket->user->id,
+                    'name' => $ticket->user->name,
+                    'email' => $ticket->user->email,
+                    'avatar' => $ticket->user->avatar,
+                    'whatsapp' => $ticket->user->whatsapp,
+                ] : null,
+            ];
+        }
+
+        return response()->json([
+            'raffle' => $raffle,
+            'winners' => $winners,
+        ]);
+    }
+
+    private function authorizeRaffle(Request $request, Raffle $raffle): void
+    {
+        $user = $request->user();
+        if ($user->isAdmin() && ! $user->isSuperAdmin() && $raffle->admin_id !== $user->id) {
+            abort(403, 'No tienes permisos para gestionar este sorteo.');
+        }
+    }
+
+    private function authorizeRaffleForUser(Request $request, Raffle $raffle): void
+    {
+        $user = $request->user();
+        if (! $user) {
+            return;
+        }
+
+        $allowedAdminId = null;
+        if ($user->isAdmin() && ! $user->isSuperAdmin()) {
+            $allowedAdminId = $user->id;
+        } elseif ($user->admin_id) {
+            $allowedAdminId = $user->admin_id;
+        }
+
+        if ($allowedAdminId && $raffle->admin_id !== $allowedAdminId) {
+            abort(403, 'No tienes permisos para ver este sorteo.');
+        }
+    }
+
+    public function all(Request $request): JsonResponse
+    {
+        $query = Raffle::orderBy('created_at', 'desc');
+        $user = $request->user();
+        if ($user && $user->isAdmin() && ! $user->isSuperAdmin()) {
+            $query->where('admin_id', $user->id);
+        }
+        $raffles = $query->get()->map(function (Raffle $r) {
             $hasBets = $r->tickets()->whereIn('status', ['in_cart', 'pending_admin', 'sold'])->exists();
-            $canEdit = now()->lessThan($r->start_time) && !$hasBets;
+            $canEdit = now()->lessThan($r->start_time) && ! $hasBets;
+
             return [
                 'id' => $r->id,
                 'name' => $r->name,
@@ -112,6 +242,7 @@ class RaffleController extends Controller
                 'end_time' => $r->end_time,
                 'ticket_price' => $r->ticket_price,
                 'prizes_count' => $r->prizes_count,
+                'cart_expiry_minutes' => $r->cart_expiry_minutes,
                 'winning_numbers' => $r->winning_numbers,
                 'drawn_at' => $r->drawn_at,
                 'is_active' => $r->is_active,
@@ -120,40 +251,47 @@ class RaffleController extends Controller
                 'can_edit' => $canEdit,
             ];
         });
+
         return response()->json($raffles);
     }
 
-    public function toggleActive(Raffle $raffle): JsonResponse
+    public function toggleActive(Request $request, Raffle $raffle): JsonResponse
     {
-        $activating = !$raffle->is_active;
+        $this->authorizeRaffle($request, $raffle);
+        $activating = ! $raffle->is_active;
 
-        if ($activating && !$raffle->drawn_at) {
+        if ($activating && ! $raffle->drawn_at) {
             $activeCount = Raffle::where('is_active', true)->where('id', '!=', $raffle->id)->count();
             if ($activeCount >= 5) {
                 return response()->json(['message' => 'No se pueden activar más de 5 sorteos en simultáneo.'], 422);
             }
         }
 
-        $raffle->update(['is_active' => !$raffle->is_active]);
+        $raffle->update(['is_active' => ! $raffle->is_active]);
+
+        broadcast(new AdminNotification($request->user()->id, 'raffle_list_updated'));
+
         return response()->json(['message' => 'Estado actualizado.', 'raffle' => $raffle->fresh()]);
     }
 
     public function update(Request $request, Raffle $raffle): JsonResponse
     {
+        $this->authorizeRaffle($request, $raffle);
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'start_time' => 'sometimes|date',
             'end_time' => 'sometimes|date|after:start_time',
             'ticket_price' => 'sometimes|numeric|min:0',
             'prizes_count' => 'nullable|integer|min:1|max:10',
+            'cart_expiry_minutes' => 'nullable|integer|min:1|max:120',
             'is_active' => 'sometimes|boolean',
         ]);
 
-        if (!$this->isEditable($raffle)) {
+        if (! $this->isEditable($raffle)) {
             return response()->json(['message' => 'No se puede modificar un sorteo que ya comenzó o tiene apuestas.'], 422);
         }
 
-        if (($validated['is_active'] ?? null) === true && !$raffle->is_active && !$raffle->drawn_at) {
+        if (($validated['is_active'] ?? null) === true && ! $raffle->is_active && ! $raffle->drawn_at) {
             $activeCount = Raffle::where('is_active', true)->where('id', '!=', $raffle->id)->count();
             if ($activeCount >= 5) {
                 return response()->json(['message' => 'No se pueden activar más de 5 sorteos en simultáneo.'], 422);
@@ -165,9 +303,10 @@ class RaffleController extends Controller
         return response()->json($raffle);
     }
 
-    public function destroy(Raffle $raffle): JsonResponse
+    public function destroy(Request $request, Raffle $raffle): JsonResponse
     {
-        if (!$this->isEditable($raffle)) {
+        $this->authorizeRaffle($request, $raffle);
+        if (! $this->isEditable($raffle)) {
             return response()->json(['message' => 'No se puede eliminar un sorteo que ya comenzó o tiene apuestas.'], 422);
         }
 
@@ -184,7 +323,7 @@ class RaffleController extends Controller
             return false;
         }
 
-        return !$this->hasBets($raffle);
+        return ! $this->hasBets($raffle);
     }
 
     private function hasBets(Raffle $raffle): bool
@@ -196,6 +335,7 @@ class RaffleController extends Controller
 
     public function setResults(Request $request, Raffle $raffle): JsonResponse
     {
+        $this->authorizeRaffle($request, $raffle);
         $validated = $request->validate([
             'winning_numbers' => 'required|array|min:1|max:10',
             'winning_numbers.*' => 'required|integer|min:1|max:99|distinct',
@@ -233,6 +373,8 @@ class RaffleController extends Controller
             'is_active' => false,
         ]);
 
+        broadcast(new AdminNotification($raffle->admin_id, 'raffle_list_updated'));
+
         return response()->json([
             'message' => 'Resultados declarados.',
             'raffle' => $raffle->fresh(),
@@ -240,70 +382,9 @@ class RaffleController extends Controller
         ]);
     }
 
-    public function results(Raffle $raffle): JsonResponse
+    public function participants(Request $request, Raffle $raffle): JsonResponse
     {
-        if (!$raffle->winning_numbers) {
-            return response()->json(['message' => 'Este sorteo aún no tiene resultados.'], 404);
-        }
-
-        $tickets = $raffle->tickets()
-            ->with('user:id,name,email,avatar,whatsapp')
-            ->whereIn('status', ['sold'])
-            ->get()
-            ->keyBy('number');
-
-        $winners = [];
-        foreach ($raffle->winning_numbers as $position => $number) {
-            $ticket = $tickets->get($number);
-            $winners[] = [
-                'position' => $position + 1,
-                'number' => $number,
-                'user' => $ticket?->user ? [
-                    'id' => $ticket->user->id,
-                    'name' => $ticket->user->name,
-                    'email' => $ticket->user->email,
-                    'avatar' => $ticket->user->avatar,
-                    'whatsapp' => $ticket->user->whatsapp,
-                ] : null,
-            ];
-        }
-
-        return response()->json([
-            'raffle' => $raffle,
-            'winners' => $winners,
-        ]);
-    }
-
-    public function board(Raffle $raffle): JsonResponse
-    {
-        $this->releaseExpiredTickets($raffle);
-
-        $tickets = $raffle->tickets()
-            ->with('user:id,name,avatar')
-            ->orderBy('number')
-            ->get()
-            ->map(function ($ticket) {
-                return [
-                    'id' => $ticket->id,
-                    'number' => $ticket->number,
-                    'status' => $ticket->status,
-                    'user_id' => $ticket->user_id,
-                    'user' => $ticket->user ? [
-                        'name' => $ticket->user->name,
-                        'avatar' => $ticket->user->avatar,
-                    ] : null,
-                    'reserved_at' => $ticket->reserved_at,
-                ];
-            });
-
-        return response()->json([
-            'raffle' => $raffle,
-            'tickets' => $tickets,
-        ]);
-    }
-
-    public function participants(Raffle $raffle): JsonResponse
-    {
+        $this->authorizeRaffle($request, $raffle);
         $tickets = $raffle->tickets()
             ->with('user:id,name,email,avatar,whatsapp')
             ->whereIn('status', ['sold', 'pending_admin', 'in_cart'])
@@ -313,9 +394,10 @@ class RaffleController extends Controller
 
         $participants = $tickets->groupBy('user_id')->map(function ($userTickets, $userId) {
             $first = $userTickets->first();
+
             return [
                 'user' => $first->user,
-                'tickets' => $userTickets->map(fn($t) => [
+                'tickets' => $userTickets->map(fn ($t) => [
                     'id' => $t->id,
                     'number' => $t->number,
                     'status' => $t->status,
@@ -332,16 +414,29 @@ class RaffleController extends Controller
     private function releaseExpiredTickets(Raffle $raffle): void
     {
         $now = now();
+        $expiryMinutes = $raffle->cart_expiry_minutes ?? 10;
+
+        $expiredOrderIds = $raffle->tickets()
+            ->where('status', 'in_cart')
+            ->where('reserved_at', '<=', $now->copy()->subMinutes($expiryMinutes))
+            ->whereNotNull('order_id')
+            ->select('order_id')
+            ->distinct()
+            ->pluck('order_id');
 
         $raffle->tickets()
             ->where('status', 'in_cart')
-            ->where('reserved_at', '<=', $now->copy()->subMinutes(10))
+            ->where('reserved_at', '<=', $now->copy()->subMinutes($expiryMinutes))
             ->update([
                 'status' => 'available',
                 'order_id' => null,
                 'user_id' => null,
                 'reserved_at' => null,
             ]);
+
+        if ($expiredOrderIds->isNotEmpty()) {
+            Order::whereIn('id', $expiredOrderIds)->where('status', 'in_cart')->update(['status' => 'expired']);
+        }
 
         $expiredPendingOrders = $raffle->orders()
             ->where('status', 'pending_admin')
