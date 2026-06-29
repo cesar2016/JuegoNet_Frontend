@@ -3,13 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Events\AdminNotification;
+use App\Events\TicketStatusChanged;
 use App\Http\Controllers\Controller;
-use App\Models\Order;
 use App\Models\Raffle;
 use App\Models\Ticket;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class RaffleController extends Controller
 {
@@ -416,26 +417,40 @@ class RaffleController extends Controller
         $now = now();
         $expiryMinutes = $raffle->cart_expiry_minutes ?? 10;
 
-        $expiredOrderIds = $raffle->tickets()
+        // Find in_cart orders whose earliest ticket has expired
+        $expiredOrders = $raffle->orders()
             ->where('status', 'in_cart')
-            ->where('reserved_at', '<=', $now->copy()->subMinutes($expiryMinutes))
-            ->whereNotNull('order_id')
-            ->select('order_id')
-            ->distinct()
-            ->pluck('order_id');
+            ->whereHas('tickets', function ($q) use ($now, $expiryMinutes) {
+                $q->where('reserved_at', '<=', $now->copy()->subMinutes($expiryMinutes));
+            })
+            ->get();
 
-        $raffle->tickets()
-            ->where('status', 'in_cart')
-            ->where('reserved_at', '<=', $now->copy()->subMinutes($expiryMinutes))
-            ->update([
-                'status' => 'available',
-                'order_id' => null,
-                'user_id' => null,
-                'reserved_at' => null,
-            ]);
+        foreach ($expiredOrders as $order) {
+            DB::transaction(function () use ($order, $raffle) {
+                $tickets = $order->tickets()->get();
+                $order->tickets()->update([
+                    'status' => 'available',
+                    'order_id' => null,
+                    'user_id' => null,
+                    'reserved_at' => null,
+                ]);
+                $order->update(['status' => 'expired']);
 
-        if ($expiredOrderIds->isNotEmpty()) {
-            Order::whereIn('id', $expiredOrderIds)->where('status', 'in_cart')->update(['status' => 'expired']);
+                foreach ($tickets as $ticket) {
+                    $ticket->status = 'available';
+                    $ticket->user_id = null;
+                    $ticket->reserved_at = null;
+                    try {
+                        broadcast(new TicketStatusChanged($ticket, $raffle->id));
+                    } catch (\Throwable $e) {
+                        Log::error('Broadcast failed for expired cart ticket', [
+                            'ticket_id' => $ticket->id,
+                            'order_id' => $order->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+            });
         }
 
         $expiredPendingOrders = $raffle->orders()
@@ -445,6 +460,7 @@ class RaffleController extends Controller
 
         foreach ($expiredPendingOrders as $order) {
             DB::transaction(function () use ($order) {
+                $tickets = $order->tickets()->get();
                 $order->tickets()->update([
                     'status' => 'available',
                     'order_id' => null,
@@ -452,7 +468,50 @@ class RaffleController extends Controller
                     'reserved_at' => null,
                 ]);
                 $order->update(['status' => 'expired']);
+
+                foreach ($tickets as $ticket) {
+                    $ticket->status = 'available';
+                    $ticket->user_id = null;
+                    $ticket->reserved_at = null;
+                    try {
+                        broadcast(new TicketStatusChanged($ticket, $order->raffle_id));
+                    } catch (\Throwable $e) {
+                        Log::error('Broadcast failed for expired pending ticket', [
+                            'ticket_id' => $ticket->id,
+                            'order_id' => $order->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
             });
+        }
+        // Clean up orphaned tickets (in_cart but order is expired/rejected — from previous bugs)
+        $orphanedTickets = $raffle->tickets()
+            ->where('status', 'in_cart')
+            ->whereNotNull('order_id')
+            ->whereHas('order', function ($q) {
+                $q->whereIn('status', ['expired', 'rejected']);
+            })
+            ->get();
+
+        foreach ($orphanedTickets as $ticket) {
+            $ticket->update([
+                'status' => 'available',
+                'order_id' => null,
+                'user_id' => null,
+                'reserved_at' => null,
+            ]);
+            $ticket->status = 'available';
+            $ticket->user_id = null;
+            $ticket->reserved_at = null;
+            try {
+                broadcast(new TicketStatusChanged($ticket, $raffle->id));
+            } catch (\Throwable $e) {
+                Log::error('Broadcast failed for orphaned ticket', [
+                    'ticket_id' => $ticket->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
     }
 }

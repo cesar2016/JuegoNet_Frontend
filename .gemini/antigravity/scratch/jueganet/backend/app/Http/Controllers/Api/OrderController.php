@@ -12,6 +12,7 @@ use App\Models\Ticket;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
@@ -129,9 +130,24 @@ class OrderController extends Controller
             $cart->increment('total_price', $raffle->ticket_price);
 
             $ticket->load('user:id,name,avatar');
+            Log::debug('[Broadcast] Sending TicketStatusChanged', [
+                'ticket_id' => $ticket->id,
+                'number' => $ticket->number,
+                'status' => $ticket->status,
+                'raffle_id' => $raffle->id,
+            ]);
             broadcast(new TicketStatusChanged($ticket, $raffle->id));
 
             $ticketCount = $cart->tickets()->count();
+
+            if ($raffle->admin_id) {
+                broadcast(new AdminNotification($raffle->admin_id, 'new_pending_order', [
+                    'order_id' => $cart->id,
+                    'total_price' => $cart->total_price,
+                    'tickets_count' => $ticketCount,
+                ]));
+            }
+
             $expiresAt = now()->addMinutes($raffle->cart_expiry_minutes ?? 10);
 
             return response()->json([
@@ -165,10 +181,28 @@ class OrderController extends Controller
 
             broadcast(new TicketStatusChanged($ticket, $order->raffle_id));
 
-            if ($order->tickets()->count() === 0) {
+            $ticketCount = $order->tickets()->count();
+
+            if ($ticketCount === 0) {
                 $order->delete();
 
+                if ($order->raffle->admin_id) {
+                    broadcast(new AdminNotification($order->raffle->admin_id, 'new_pending_order', [
+                        'order_id' => $order->id,
+                        'tickets_count' => 0,
+                        'deleted' => true,
+                    ]));
+                }
+
                 return response()->json(['message' => 'Número eliminado. Carrito vacío.'], 200);
+            }
+
+            if ($order->raffle->admin_id) {
+                broadcast(new AdminNotification($order->raffle->admin_id, 'new_pending_order', [
+                    'order_id' => $order->id,
+                    'total_price' => $order->total_price,
+                    'tickets_count' => $ticketCount,
+                ]));
             }
 
             return response()->json([
@@ -224,7 +258,12 @@ class OrderController extends Controller
             }
 
             if ($raffle && $raffle->admin_id) {
-                broadcast(new AdminNotification($raffle->admin_id, 'new_pending_order'));
+                broadcast(new AdminNotification($raffle->admin_id, 'new_pending_order', [
+                    'order_id' => $freshCart->id,
+                    'total_price' => $freshCart->total_price,
+                    'tickets_count' => $freshCart->tickets->count(),
+                    'status' => $freshCart->status,
+                ]));
             }
 
             return response()->json([
@@ -261,6 +300,7 @@ class OrderController extends Controller
 
         if ($reservedAt && now()->diffInMinutes($reservedAt) >= $expiryMinutes) {
             DB::transaction(function () use ($cart) {
+                $tickets = $cart->tickets()->get();
                 $cart->tickets()->update([
                     'status' => 'available',
                     'order_id' => null,
@@ -268,6 +308,21 @@ class OrderController extends Controller
                     'reserved_at' => null,
                 ]);
                 $cart->update(['status' => 'expired']);
+
+                foreach ($tickets as $ticket) {
+                    $ticket->status = 'available';
+                    $ticket->user_id = null;
+                    $ticket->reserved_at = null;
+                    try {
+                        broadcast(new TicketStatusChanged($ticket, $cart->raffle_id));
+                    } catch (\Throwable $e) {
+                        Log::error('Broadcast failed during cart expiration', [
+                            'ticket_id' => $ticket->id,
+                            'cart_id' => $cart->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
             });
         }
     }

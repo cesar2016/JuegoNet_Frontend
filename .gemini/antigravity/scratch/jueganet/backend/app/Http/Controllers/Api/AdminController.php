@@ -50,7 +50,7 @@ class AdminController extends Controller
             return response()->json(['message' => 'No tienes permisos para aprobar este usuario.'], 403);
         }
 
-        if ($user->status !== 'pending_approval') {
+        if ($user->status !== 'pending_approval' && $user->status !== 'rejected') {
             return response()->json(['message' => 'El usuario no está pendiente de aprobación.'], 400);
         }
 
@@ -131,6 +131,13 @@ class AdminController extends Controller
                 broadcast(new TicketStatusChanged($ticket, $freshOrder->raffle_id));
             }
 
+            if ($freshOrder->raffle?->admin_id) {
+                broadcast(new AdminNotification($freshOrder->raffle->admin_id, 'new_pending_order', [
+                    'order_id' => $freshOrder->id,
+                    'status' => $freshOrder->status,
+                ]));
+            }
+
             return response()->json([
                 'message' => 'Apuesta aceptada. Números vendidos.',
                 'order' => $freshOrder,
@@ -168,6 +175,13 @@ class AdminController extends Controller
                 broadcast(new TicketStatusChanged($ticket, $freshOrder->raffle_id));
             }
 
+            if ($freshOrder->raffle?->admin_id) {
+                broadcast(new AdminNotification($freshOrder->raffle->admin_id, 'new_pending_order', [
+                    'order_id' => $freshOrder->id,
+                    'status' => $freshOrder->status,
+                ]));
+            }
+
             return response()->json([
                 'message' => 'Apuesta rechazada. Números liberados.',
                 'order' => $freshOrder,
@@ -183,6 +197,7 @@ class AdminController extends Controller
 
         foreach ($expired as $order) {
             DB::transaction(function () use ($order) {
+                $tickets = $order->tickets()->get();
                 $order->tickets()->update([
                     'status' => 'available',
                     'order_id' => null,
@@ -190,6 +205,13 @@ class AdminController extends Controller
                     'reserved_at' => null,
                 ]);
                 $order->update(['status' => 'expired']);
+
+                foreach ($tickets as $ticket) {
+                    $ticket->status = 'available';
+                    $ticket->user_id = null;
+                    $ticket->reserved_at = null;
+                    broadcast(new TicketStatusChanged($ticket, $order->raffle_id));
+                }
             });
         }
 
@@ -206,6 +228,7 @@ class AdminController extends Controller
 
         foreach ($expiredCarts as $order) {
             DB::transaction(function () use ($order) {
+                $tickets = $order->tickets()->get();
                 $order->tickets()->update([
                     'status' => 'available',
                     'order_id' => null,
@@ -213,6 +236,13 @@ class AdminController extends Controller
                     'reserved_at' => null,
                 ]);
                 $order->update(['status' => 'expired']);
+
+                foreach ($tickets as $ticket) {
+                    $ticket->status = 'available';
+                    $ticket->user_id = null;
+                    $ticket->reserved_at = null;
+                    broadcast(new TicketStatusChanged($ticket, $order->raffle_id));
+                }
             });
         }
     }

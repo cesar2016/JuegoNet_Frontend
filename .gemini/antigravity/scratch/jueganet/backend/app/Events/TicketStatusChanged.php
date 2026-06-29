@@ -3,12 +3,12 @@
 namespace App\Events;
 
 use App\Models\Ticket;
-use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Broadcasting\PrivateChannel;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 
-class TicketStatusChanged implements ShouldBroadcast
+class TicketStatusChanged implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets;
 
@@ -19,16 +19,23 @@ class TicketStatusChanged implements ShouldBroadcast
 
     public function broadcastOn(): array
     {
-        return [new Channel('raffle.'.$this->raffleId)];
+        return [new PrivateChannel('raffle.'.$this->raffleId)];
+    }
+
+    public function broadcastAs(): string
+    {
+        return 'TicketStatusChanged';
     }
 
     public function broadcastWith(): array
     {
         return [
             'id' => $this->ticket->id,
+            'raffle_id' => $this->raffleId,
             'number' => $this->ticket->number,
             'status' => $this->ticket->status,
             'user_id' => $this->ticket->user_id,
+            'order_id' => $this->ticket->order_id,
             'user' => $this->ticket->relationLoaded('user') && $this->ticket->user
                 ? ['name' => $this->ticket->user->name, 'avatar' => $this->ticket->user->avatar]
                 : null,

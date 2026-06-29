@@ -4,10 +4,10 @@ namespace App\Events;
 
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 
-class AdminNotification implements ShouldBroadcast
+class AdminNotification implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets;
 
@@ -20,6 +20,11 @@ class AdminNotification implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [new PrivateChannel('admin.'.$this->adminId)];
+    }
+
+    public function broadcastAs(): string
+    {
+        return 'AdminNotification';
     }
 
     public function broadcastWith(): array
