@@ -37,13 +37,16 @@ export default function Navbar() {
     fetchRaffles();
 
     if (user && (user.role === 'admin' || user.role === 'super_admin')) {
+      console.log('[Navbar] Subscribing to admin channel:', `admin.${user.id}`);
       const echo = getEcho();
-      const channel = echo.private(`admin.${user.id}`);
-      const handler = (e: { type: string }) => {
+      echo.private(`admin.${user.id}`);
+      const handler = (eventName: string, e: { type: string }) => {
+        if (eventName !== 'AdminNotification') return;
+        console.log('[Navbar] AdminNotification received:', e);
         if (e.type === 'raffle_list_updated') fetchRaffles();
       };
-      channel.listen('AdminNotification', handler);
-      return () => { channel.stopListening('AdminNotification'); };
+      echo.connector.pusher.bind_global(handler);
+      return () => { echo.connector.pusher.unbind_global(handler); };
     } else {
       const interval = setInterval(fetchRaffles, 60000);
       return () => clearInterval(interval);

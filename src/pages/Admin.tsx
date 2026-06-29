@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import api from '../lib/api';
@@ -45,6 +45,7 @@ export default function Admin() {
   const [orderSearch, setOrderSearch] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState('ongoing');
   const [orderSearchInput, setOrderSearchInput] = useState('');
+  const [orderViewMode, setOrderViewMode] = useState<'cart' | 'pending'>('pending');
   const [raffles, setRaffles] = useState<Raffle[]>([]);
   const [raffleForm, setRaffleForm] = useState({ name: '', ticket_price: '', start_time: '', end_time: '', prizes_count: '1', cart_expiry_minutes: '10' });
   const [selectedRaffle, setSelectedRaffle] = useState<Raffle | null>(null);
@@ -62,6 +63,9 @@ export default function Admin() {
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [inviteLoading, setInviteLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const allOrdersRef = useRef(allOrders);
+  const fetchDataRef = useRef<() => void>(() => {});
+  const activeTabRef = useRef(activeTab);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 1000);
@@ -82,21 +86,82 @@ export default function Admin() {
 
   useEffect(() => {
     if (!user) return;
+    console.log('[Admin] Subscribing to admin channel:', `admin.${user.id}`);
     refreshBadges();
     const echo = getEcho();
-    const channel = echo.private(`admin.${user.id}`);
-    const handler = (e: { type: string }) => {
-      if (e.type === 'new_pending_order' || e.type === 'raffle_list_updated') {
-        refreshBadges();
-        if (activeTab === 'orders') fetchData();
-      } else if (e.type === 'pending_users_updated') {
-        refreshBadges();
-        if (activeTab === 'users') fetchData();
+    echo.private(`admin.${user.id}`);
+
+    const handler = (eventName: string, e: { type: string; data?: { order_id?: number; total_price?: string; tickets_count?: number; status?: string; deleted?: boolean } }) => {
+      if (eventName !== 'AdminNotification') return;
+      console.log('[Admin] AdminNotification received:', e);
+      refreshBadges();
+      // Reload the table only when an order is confirmed (needs admin attention)
+      if (e.type === 'new_pending_order' && e.data?.status === 'pending_admin') {
+        if (activeTabRef.current === 'orders') fetchDataRef.current();
+      }
+      if (e.type === 'pending_users_updated' && activeTabRef.current === 'users') {
+        fetchDataRef.current();
       }
     };
-    channel.listen('AdminNotification', handler);
-    return () => { channel.stopListening('AdminNotification'); };
+    echo.connector.pusher.bind_global(handler);
+    return () => { echo.connector.pusher.unbind_global(handler); };
   }, [user, activeTab]);
+
+  // Real-time updates for "En carrito" view
+  useEffect(() => {
+    if (orderViewMode !== 'cart') return;
+    const echo = getEcho();
+
+    // Subscribe to all active raffle channels to receive TicketStatusChanged
+    api.get<{ id: number }[]>('/raffles').then(raffles => {
+      raffles.forEach(r => echo.private(`raffle.${r.id}`));
+    }).catch(() => {});
+
+    const handler = (eventName: string, data: { id: number; raffle_id: number; number: number; status: string; user_id: number | null; order_id: number | null }) => {
+      if (eventName !== 'TicketStatusChanged') return;
+      console.log('[Admin] TicketStatusChanged received:', data);
+
+      if (data.status === 'in_cart' && data.order_id) {
+        if (!allOrdersRef.current.some(o => o.order.id === data.order_id)) {
+          fetchDataRef.current();
+          return;
+        }
+        setAllOrders(prev => {
+          const idx = prev.findIndex(o => o.order.id === data.order_id);
+          if (idx === -1) return prev;
+          const order = { ...prev[idx] };
+          const tix = order.order.tickets.filter(t => t.id !== data.id);
+          tix.push({ id: data.id, number: data.number });
+          tix.sort((a, b) => a.number - b.number);
+          order.order = { ...order.order, tickets: tix };
+          const updated = [...prev];
+          updated[idx] = order;
+          return updated;
+        });
+      } else {
+        setAllOrders(prev => {
+          const idx = prev.findIndex(o => o.order.tickets.some(t => t.id === data.id));
+          if (idx === -1) return prev;
+          const order = { ...prev[idx] };
+          const tix = order.order.tickets.filter(t => t.id !== data.id);
+          if (tix.length === 0) {
+            return prev.filter((_, i) => i !== idx);
+          }
+          order.order = { ...order.order, tickets: tix };
+          const updated = [...prev];
+          updated[idx] = order;
+          return updated;
+        });
+      }
+    };
+    echo.connector.pusher.bind_global(handler);
+    return () => { echo.connector.pusher.unbind_global(handler); };
+  }, [orderViewMode]);
+
+  useEffect(() => {
+    if (activeTab !== 'orders') return;
+    fetchData();
+  }, [activeTab, orderPage, orderPerPage, orderSearch, orderStatusFilter, orderViewMode]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -141,6 +206,11 @@ export default function Admin() {
     setLoading(false);
   };
 
+  // Keep refs in sync with latest values
+  allOrdersRef.current = allOrders;
+  fetchDataRef.current = fetchData;
+  activeTabRef.current = activeTab;
+
   useEffect(() => {
     if (activeTab === 'raffles') {
       const now = new Date();
@@ -162,11 +232,6 @@ export default function Admin() {
     if (activeTab !== 'users') return;
     fetchData();
   }, [userPage, userPerPage, userSearch, userStatusFilter]);
-
-  useEffect(() => {
-    if (activeTab !== 'orders') return;
-    fetchData();
-  }, [activeTab, orderPage, orderPerPage, orderSearch, orderStatusFilter]);
 
   useEffect(() => {
     if (activeTab !== 'users') return;
@@ -253,6 +318,7 @@ export default function Admin() {
     try {
       await api.post(`/admin/users/${userId}/approve`);
       setAllUsers((prev) => prev.map((u) => u.id === userId ? { ...u, status: 'approved' } : u));
+      refreshBadges();
       toast.success('Usuario aprobado correctamente.');
     } catch {
       toast.error('Error al aprobar usuario');
@@ -263,6 +329,7 @@ export default function Admin() {
     try {
       await api.post(`/admin/users/${userId}/reject`);
       setAllUsers((prev) => prev.map((u) => u.id === userId ? { ...u, status: 'rejected' } : u));
+      refreshBadges();
       toast.success('Usuario rechazado.');
     } catch {
       toast.error('Error al rechazar usuario');
@@ -274,10 +341,12 @@ export default function Admin() {
       if (currentlyBlocked) {
         await api.post(`/admin/users/${userId}/unblock`);
         setAllUsers((prev) => prev.map((u) => u.id === userId ? { ...u, status: 'approved' } : u));
+        refreshBadges();
         toast.success('Usuario desbloqueado.');
       } else {
         await api.post(`/admin/users/${userId}/block`);
         setAllUsers((prev) => prev.map((u) => u.id === userId ? { ...u, status: 'blocked' } : u));
+        refreshBadges();
         toast.success('Usuario bloqueado.');
       }
     } catch {
@@ -492,7 +561,16 @@ export default function Admin() {
 
           {activeTab === 'orders' && (
             <>
-              <h2 className="text-xl font-bold text-gray-800 mb-4">Órdenes</h2>
+              <div className="flex gap-2 mb-4">
+                <button onClick={() => { setOrderViewMode('cart'); setOrderStatusFilter('in_cart'); }}
+                  className={`flex-1 sm:flex-none px-4 py-2 rounded-lg font-semibold text-sm transition ${orderViewMode === 'cart' ? 'bg-green-600 text-white shadow-lg' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                  En carrito
+                </button>
+                <button onClick={() => { setOrderViewMode('pending'); setOrderStatusFilter('pending_admin'); }}
+                  className={`flex-1 sm:flex-none px-4 py-2 rounded-lg font-semibold text-sm transition ${orderViewMode === 'pending' ? 'bg-green-600 text-white shadow-lg' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                  Pendientes
+                </button>
+              </div>
 
               <div className="flex flex-wrap items-center gap-3 mb-4">
                 <form onSubmit={handleOrderSearchSubmit} className="flex-1 min-w-[200px]">

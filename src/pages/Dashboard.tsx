@@ -35,6 +35,12 @@ export default function Dashboard() {
   const [selectedFinished, setSelectedFinished] = useState<Raffle | null>(null);
   const [winners, setWinners] = useState<Winner[]>([]);
   const [resultsLoading, setResultsLoading] = useState(false);
+
+  // DEBUG: log tickets state changes
+  useEffect(() => {
+    const selected = tickets.filter(t => t.status !== 'available');
+    if (selected.length > 0) console.log('[Dashboard] Tickets changed — selected count:', selected.length, 'ticket ids:', selected.map(t => `${t.number}=${t.status}`));
+  }, [tickets]);
   const fmtDate = (d: Date) => {
     const pad = (n: number) => n.toString().padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -60,10 +66,12 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!pendingOrder || !selectedRaffle || !user) return;
+    console.log('[Dashboard] Subscribing to user channel:', `user.${user.id}`, 'for order:', pendingOrder.id);
     const echo = getEcho();
-    const channel = echo.private(`user.${user.id}`);
-    const handler = (e: { order_id: number; status: string }) => {
-      if (e.order_id !== pendingOrder.id) return;
+    echo.private(`user.${user.id}`);
+    const handler = (eventName: string, e: { order_id: number; status: string }) => {
+      if (eventName !== 'OrderStatusChanged' || e.order_id !== pendingOrder.id) return;
+      console.log('[Dashboard] OrderStatusChanged received:', e);
       if (e.status !== 'pending_admin') {
         loadRaffle(selectedRaffle);
         if (e.status === 'sold') {
@@ -73,23 +81,29 @@ export default function Dashboard() {
         }
       }
     };
-    channel.listen('OrderStatusChanged', handler);
-    return () => { channel.stopListening('OrderStatusChanged'); };
+    echo.connector.pusher.bind_global(handler);
+    return () => { echo.connector.pusher.unbind_global(handler); };
   }, [pendingOrder, selectedRaffle, user]);
 
   useEffect(() => {
     if (!selectedRaffle || showResults) return;
     const echo = getEcho();
-    const channel = echo.private(`raffle.${selectedRaffle.id}`);
-    const handler = (e: { id: number; number: number; status: string; user_id: number | null; user: { name: string; avatar: string | null } | null }) => {
+    const currentRaffleId = selectedRaffle.id;
+
+    // Ensure subscription (Echo deduplicates)
+    echo.private(`raffle.${currentRaffleId}`);
+
+    const handler = (eventName: string, data: { id: number; raffle_id: number; number: number; status: string; user_id: number | null; user: { name: string; avatar: string | null } | null }) => {
+      if (eventName !== 'TicketStatusChanged' || data.raffle_id !== currentRaffleId) return;
+      console.log('[Dashboard] TicketStatusChanged received:', data);
       setTickets(prev => prev.map(t =>
-        t.id === e.id
-          ? { ...t, status: e.status, user_id: e.user_id, user: e.user }
+        t.id === data.id
+          ? { ...t, status: data.status, user_id: data.user_id, user: data.user }
           : t
       ));
     };
-    channel.listen('TicketStatusChanged', handler);
-    return () => { channel.stopListening('TicketStatusChanged'); };
+    echo.connector.pusher.bind_global(handler);
+    return () => { echo.connector.pusher.unbind_global(handler); };
   }, [selectedRaffle, showResults]);
 
   useEffect(() => {
@@ -184,15 +198,22 @@ export default function Dashboard() {
 
   const handleSelectNumber = async (number: number) => {
     if (!selectedRaffle || isAdmin) return;
+    console.log('[Dashboard] handleSelectNumber called with number:', number, 'current tickets count:', tickets.length);
     try {
       const res = await api.post<{ ticket: Ticket; cart: CartData; remaining_seconds: number }>(
         '/cart/add', { raffle_id: selectedRaffle.id, number }
       );
-      setTickets(prev => prev.map(t => t.number === number ? { ...t, status: 'in_cart', user_id: user!.id } : t));
+      console.log('[Dashboard] API success, ticket:', res.ticket, 'cart:', res.cart);
+      setTickets(prev => {
+        const updated = prev.map(t => t.number === number ? { ...t, status: 'in_cart', user_id: user!.id } : t);
+        console.log('[Dashboard] setTickets in handleSelectNumber:', updated.filter(t => t.number === number));
+        return updated;
+      });
       setCart(res.cart);
       setRemainingSeconds(res.remaining_seconds);
     } catch (err: unknown) {
       const apiErr = err as { message?: string };
+      console.error('[Dashboard] handleSelectNumber error:', err);
       if (apiErr.message?.includes('no está disponible')) {
         toast.warn('El número no está disponible por ahora', { position: 'top-center' });
       } else {
@@ -233,11 +254,10 @@ export default function Dashboard() {
     if (!selectedRaffle) return;
     setCart(null);
     setRemainingSeconds(0);
-    try {
-      const boardData = await api.get<{ raffle: Raffle; tickets: Ticket[] }>(`/raffles/${selectedRaffle.id}/board`);
-      setTickets(boardData.tickets);
-    } catch {}
-  }, [selectedRaffle]);
+    setTickets(prev => prev.map(t => t.status === 'in_cart' && t.user_id === user!.id ? { ...t, status: 'available', user_id: null, user: null } : t));
+    // Trigger backend to release expired tickets (ignore response — broadcasts handle the rest)
+    api.get(`/raffles/${selectedRaffle.id}/board`).catch(() => {});
+  }, [selectedRaffle, user]);
 
   if (authLoading) return <div className="min-h-screen bg-gradient-to-br from-green-700 via-green-600 to-emerald-700 flex items-center justify-center text-white text-xl">Cargando...</div>;
 

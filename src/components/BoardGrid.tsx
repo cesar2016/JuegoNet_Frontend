@@ -27,7 +27,10 @@ export default function BoardGrid({ tickets, currentUserId, onSelectNumber, load
 
     const getTicketStyle = (ticket: Ticket) => {
     if (ticket.status === 'pending_admin' || ticket.status === 'in_cart') {
-      return 'bg-gray-300/50 text-black border-gray-400/50 cursor-not-allowed';
+      if (ticket.user_id === currentUserId) {
+        return 'bg-pink-200 text-pink-900 border-pink-400 cursor-not-allowed font-bold';
+      }
+      return 'bg-sky-200 text-sky-900 border-sky-400 cursor-not-allowed font-bold';
     }
     if (ticket.status === 'sold') {
       if (isOtherUser(ticket)) {
@@ -55,12 +58,12 @@ export default function BoardGrid({ tickets, currentUserId, onSelectNumber, load
           >
             <span className="text-2xl sm:text-3xl md:text-4xl leading-none tabular-nums">{String(ticket.number).padStart(2, '0')}</span>
             {ticket.status === 'in_cart' && (
-              <div className="absolute -bottom-2 -left-2 bg-sky-300 rounded-full p-1 flex items-center justify-center">
+              <div className={`absolute -bottom-2 -left-2 ${ticket.user_id === currentUserId ? 'bg-pink-300' : 'bg-sky-300'} rounded-full p-1 flex items-center justify-center`}>
                 <ShoppingCart size={14} className="text-black" />
               </div>
             )}
             {ticket.status === 'pending_admin' && (
-              <div className="absolute -bottom-2 -left-2 bg-yellow-300 rounded-full p-1 flex items-center justify-center">
+              <div className={`absolute -bottom-2 -left-2 ${ticket.user_id === currentUserId ? 'bg-pink-300' : 'bg-yellow-300'} rounded-full p-1 flex items-center justify-center`}>
                 <Clock size={14} className="text-black" />
               </div>
             )}
