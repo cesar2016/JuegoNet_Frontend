@@ -30,6 +30,7 @@ Monorepo: `backend/` (Laravel 13 API) + `frontend/` (React 19 + Vite 8 + Tailwin
 | `composer test` | Runs `artisan config:clear` then `artisan test` (PHPUnit with SQLite `:memory:`) |
 | `composer run setup` | `composer install`, copy `.env` if missing, `key:generate`, `migrate --force`, `npm install --ignore-scripts`, `npm run build` |
 | `php artisan migrate` | Run DB migrations |
+| `php artisan db:reset` | Drop all tables, migrate fresh, create 1 super admin (admin@jueganet.com / admin123). Pide confirmación |
 | `./vendor/bin/pint` | Format PHP (Pint, no custom config) |
 
 ## Frontend
@@ -55,6 +56,7 @@ Monorepo: `backend/` (Laravel 13 API) + `frontend/` (React 19 + Vite 8 + Tailwin
 ## Gotchas
 
 - **New routes**: add to `routes/api.php` inside the correct middleware group (`auth:sanctum`, `check.status`, `admin`). If exposing to frontend, add a wrapper in `src/lib/api.ts`.
+- **CORS for broadcasting**: Echo auth calls `/broadcasting/auth` — this path must be in `config/cors.php` `'paths'` array (not just `api/*`).
 - **`super.admin` middleware**: route references it but **no alias registered** in `bootstrap/app.php` and the controller method (`createAdmin`) does not exist. This is dead/unreachable code.
 - **Admin scoping methods** (actual names, for grep): `User::scopeForAdmin()`, `Raffle::scopeForAdmin()`, `Order::scopeForAdmin()` (model scopes); `AdminController::applyUserScope()`/`applyOrderScope()`; `RaffleController::scopeForUser()`.
 - **`composer run test`** always runs `config:clear` first.

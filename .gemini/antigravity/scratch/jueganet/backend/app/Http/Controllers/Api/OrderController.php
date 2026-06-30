@@ -130,22 +130,25 @@ class OrderController extends Controller
             $cart->increment('total_price', $raffle->ticket_price);
 
             $ticket->load('user:id,name,avatar');
-            Log::debug('[Broadcast] Sending TicketStatusChanged', [
-                'ticket_id' => $ticket->id,
-                'number' => $ticket->number,
-                'status' => $ticket->status,
-                'raffle_id' => $raffle->id,
-            ]);
-            broadcast(new TicketStatusChanged($ticket, $raffle->id));
+
+            try {
+                broadcast(new TicketStatusChanged($ticket, $raffle->id));
+            } catch (\Throwable $e) {
+                Log::error('Broadcast TicketStatusChanged failed', ['error' => $e->getMessage()]);
+            }
 
             $ticketCount = $cart->tickets()->count();
 
             if ($raffle->admin_id) {
-                broadcast(new AdminNotification($raffle->admin_id, 'new_pending_order', [
-                    'order_id' => $cart->id,
-                    'total_price' => $cart->total_price,
-                    'tickets_count' => $ticketCount,
-                ]));
+                try {
+                    broadcast(new AdminNotification($raffle->admin_id, 'new_pending_order', [
+                        'order_id' => $cart->id,
+                        'total_price' => $cart->total_price,
+                        'tickets_count' => $ticketCount,
+                    ]));
+                } catch (\Throwable $e) {
+                    Log::error('Broadcast AdminNotification failed', ['error' => $e->getMessage()]);
+                }
             }
 
             $expiresAt = now()->addMinutes($raffle->cart_expiry_minutes ?? 10);
@@ -179,7 +182,11 @@ class OrderController extends Controller
 
             $order->decrement('total_price', $order->raffle->ticket_price);
 
-            broadcast(new TicketStatusChanged($ticket, $order->raffle_id));
+            try {
+                broadcast(new TicketStatusChanged($ticket, $order->raffle_id));
+            } catch (\Throwable $e) {
+                Log::error('Broadcast TicketStatusChanged failed', ['error' => $e->getMessage()]);
+            }
 
             $ticketCount = $order->tickets()->count();
 
@@ -187,22 +194,30 @@ class OrderController extends Controller
                 $order->delete();
 
                 if ($order->raffle->admin_id) {
-                    broadcast(new AdminNotification($order->raffle->admin_id, 'new_pending_order', [
-                        'order_id' => $order->id,
-                        'tickets_count' => 0,
-                        'deleted' => true,
-                    ]));
+                    try {
+                        broadcast(new AdminNotification($order->raffle->admin_id, 'new_pending_order', [
+                            'order_id' => $order->id,
+                            'tickets_count' => 0,
+                            'deleted' => true,
+                        ]));
+                    } catch (\Throwable $e) {
+                        Log::error('Broadcast AdminNotification failed', ['error' => $e->getMessage()]);
+                    }
                 }
 
                 return response()->json(['message' => 'Número eliminado. Carrito vacío.'], 200);
             }
 
             if ($order->raffle->admin_id) {
-                broadcast(new AdminNotification($order->raffle->admin_id, 'new_pending_order', [
-                    'order_id' => $order->id,
-                    'total_price' => $order->total_price,
-                    'tickets_count' => $ticketCount,
-                ]));
+                try {
+                    broadcast(new AdminNotification($order->raffle->admin_id, 'new_pending_order', [
+                        'order_id' => $order->id,
+                        'total_price' => $order->total_price,
+                        'tickets_count' => $ticketCount,
+                    ]));
+                } catch (\Throwable $e) {
+                    Log::error('Broadcast AdminNotification failed', ['error' => $e->getMessage()]);
+                }
             }
 
             return response()->json([
@@ -249,21 +264,33 @@ class OrderController extends Controller
             $cart->tickets()->update(['status' => 'pending_admin']);
 
             $freshCart = $cart->fresh();
-            broadcast(new OrderStatusChanged($freshCart, $user->id));
+            try {
+                broadcast(new OrderStatusChanged($freshCart, $user->id));
+            } catch (\Throwable $e) {
+                Log::error('Broadcast OrderStatusChanged failed', ['error' => $e->getMessage()]);
+            }
 
             $raffle = Raffle::find($raffleId);
             foreach ($freshCart->tickets as $ticket) {
                 $ticket->load('user:id,name,avatar');
-                broadcast(new TicketStatusChanged($ticket, $raffleId));
+                try {
+                    broadcast(new TicketStatusChanged($ticket, $raffleId));
+                } catch (\Throwable $e) {
+                    Log::error('Broadcast TicketStatusChanged failed', ['error' => $e->getMessage()]);
+                }
             }
 
             if ($raffle && $raffle->admin_id) {
-                broadcast(new AdminNotification($raffle->admin_id, 'new_pending_order', [
-                    'order_id' => $freshCart->id,
-                    'total_price' => $freshCart->total_price,
-                    'tickets_count' => $freshCart->tickets->count(),
-                    'status' => $freshCart->status,
-                ]));
+                try {
+                    broadcast(new AdminNotification($raffle->admin_id, 'new_pending_order', [
+                        'order_id' => $freshCart->id,
+                        'total_price' => $freshCart->total_price,
+                        'tickets_count' => $freshCart->tickets->count(),
+                        'status' => $freshCart->status,
+                    ]));
+                } catch (\Throwable $e) {
+                    Log::error('Broadcast AdminNotification failed', ['error' => $e->getMessage()]);
+                }
             }
 
             return response()->json([
