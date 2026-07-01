@@ -1,0 +1,2 @@
+[php]
+extensions = ["ctype", "curl", "dom", "fileinfo", "filter", "hash", "mbstring", "openssl", "pcntl", "pcre", "pdo", "session", "tokenizer", "xml", "pdo_mysql"]
