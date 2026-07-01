@@ -19,7 +19,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [env('FRONTEND_URL', 'http://localhost:3333'), 'http://127.0.0.1:3333', 'https://www.jueganet.online'],
+    'allowed_origins' => [env('FRONTEND_URL', 'http://localhost:3333'), 'http://127.0.0.1:3333', 'https://www.jueganet.online', 'https://jueganet.online'],
 
     'allowed_origins_patterns' => [],
 
