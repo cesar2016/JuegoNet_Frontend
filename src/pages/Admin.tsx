@@ -391,7 +391,7 @@ export default function Admin() {
     if (!selectedRaffle) return;
     const nums = winningInputs.map(Number);
     if (nums.some(isNaN) || new Set(nums).size !== nums.length) {
-      toast.error('Todos los números deben ser distintos y válidos (1-99).');
+      toast.error('Todos los números deben ser distintos y válidos (00-99).');
       return;
     }
     try {
@@ -708,12 +708,12 @@ export default function Admin() {
                   {!selectedRaffle.drawn_at && (
                     <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
                       <h3 className="font-bold text-green-800 mb-3 inline-flex items-center gap-2"><Trophy size={20} /> Declarar resultados</h3>
-                      <p className="text-sm text-green-600 mb-3">Ingresá los {selectedRaffle.prizes_count} números ganadores (del 1 al 99, distintos):</p>
+                      <p className="text-sm text-green-600 mb-3">Ingresá los {selectedRaffle.prizes_count} números ganadores (del 00 al 99, distintos):</p>
                       <div className="flex flex-wrap gap-3 mb-4">
                         {winningInputs.map((val, i) => (
                           <div key={i}>
                             <label className="block text-xs text-green-600 font-semibold mb-1">N° {i + 1}</label>
-                            <input type="number" min={1} max={99} value={val} onChange={(e) => { const next = [...winningInputs]; next[i] = e.target.value; setWinningInputs(next); }} className="w-20 px-3 py-2 rounded-lg border border-green-300 outline-none text-center" placeholder="##" />
+                            <input type="number" min={0} max={99} value={val} onChange={(e) => { const next = [...winningInputs]; next[i] = e.target.value; setWinningInputs(next); }} className="w-20 px-3 py-2 rounded-lg border border-green-300 outline-none text-center" placeholder="##" />
                           </div>
                         ))}
                       </div>
