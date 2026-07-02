@@ -47,7 +47,7 @@ class AuthController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'status' => $isFromSuper ? 'approved' : 'pending_approval',
+            'status' => 'pending_approval',
             'role' => $isFromSuper ? 'admin' : 'user',
             'admin_id' => $adminId,
         ]);
@@ -57,7 +57,7 @@ class AuthController extends Controller
         }
 
         $message = $isFromSuper
-            ? 'Registro exitoso. Ya tienes acceso de administrador.'
+            ? 'Registro exitoso como administrador. Espera la aprobación.'
             : 'Registro exitoso. Espera la aprobación del administrador.';
 
         return response()->json([
