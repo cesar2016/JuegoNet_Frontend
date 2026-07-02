@@ -320,7 +320,21 @@ class RaffleController extends Controller
 
     private function isEditable(Raffle $raffle): bool
     {
-        if (now()->greaterThanOrEqualTo($raffle->start_time)) {
+        $now = now();
+        $start = $raffle->start_time;
+
+        \Illuminate\Support\Facades\Log::debug('[isEditable]', [
+            'raffle' => $raffle->id,
+            'now' => $now->toIso8601String(),
+            'start_time' => $start?->toIso8601String(),
+            'now_timestamp' => $now->timestamp,
+            'start_timestamp' => $start?->timestamp,
+            'now_tz' => $now->timezoneName,
+            'start_tz' => $start?->timezoneName,
+            'passed' => $now->greaterThanOrEqualTo($start),
+        ]);
+
+        if ($now->greaterThanOrEqualTo($start)) {
             return false;
         }
 
