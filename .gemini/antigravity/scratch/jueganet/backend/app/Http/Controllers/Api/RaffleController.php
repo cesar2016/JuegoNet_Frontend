@@ -95,6 +95,11 @@ class RaffleController extends Controller
         if (! ($validated['start_time'] ?? null)) {
             $validated['start_time'] = now();
             $validated['end_time'] = now()->addHours((int) ($validated['duration_hours'] ?? 1));
+        } else {
+            $start = \Illuminate\Support\Carbon::parse($validated['start_time']);
+            if ($start->isPast()) {
+                return response()->json(['message' => 'La fecha de inicio no puede ser anterior a ahora.'], 422);
+            }
         }
 
         $validated['prizes_count'] ??= 1;
@@ -290,6 +295,13 @@ class RaffleController extends Controller
 
         if (! $this->isEditable($raffle)) {
             return response()->json(['message' => 'No se puede modificar un sorteo que ya comenzó o tiene apuestas.'], 422);
+        }
+
+        if (isset($validated['start_time'])) {
+            $start = \Illuminate\Support\Carbon::parse($validated['start_time']);
+            if ($start->isPast()) {
+                return response()->json(['message' => 'La fecha de inicio no puede ser anterior a ahora.'], 422);
+            }
         }
 
         if (($validated['is_active'] ?? null) === true && ! $raffle->is_active && ! $raffle->drawn_at) {
