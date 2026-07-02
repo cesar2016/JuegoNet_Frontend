@@ -11,14 +11,14 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { Settings, Users, FileText, Dice5, Search, Check, X, Clock, ArrowLeft, Trophy, PenLine, Trash2, Pencil as PencilIcon, Eye, ShoppingCart, Link2, Copy, UserPlus } from 'lucide-react';
 
-interface AllUser { id: number; name: string; email: string; whatsapp: string | null; status: string; role: string; created_at: string; }
+interface AllUser { id: number; name: string; email: string; whatsapp: string | null; status: string; role: string; created_at: string; admin: { id: number; name: string } | null; }
 interface PaginatedUsers { data: AllUser[]; current_page: number; last_page: number; per_page: number; total: number; from: number | null; to: number | null; }
 interface OrderItem { order: { id: number; total_price: string; status: string; confirmed_at: string | null; user: { name: string; email: string }; raffle: { id: number; name: string } | null; tickets: { id: number; number: number }[]; created_at: string; }; remaining_seconds: number; }
 interface PaginatedOrders { data: OrderItem[]; current_page: number; last_page: number; per_page: number; total: number; from: number | null; to: number | null; }
-interface Raffle { id: number; name: string; is_active: boolean; start_time: string; end_time: string; ticket_price: string; prizes_count: number; cart_expiry_minutes?: number; winning_numbers: number[] | null; drawn_at: string | null; can_edit?: boolean; }
+interface Raffle { id: number; name: string; is_active: boolean; start_time: string; end_time: string; ticket_price: string; prizes_count: number; prizes: { description: string }[]; cart_expiry_minutes?: number; winning_numbers: number[] | null; drawn_at: string | null; admin: { id: number; name: string } | null; can_edit?: boolean; }
 interface ParticipantTicket { id: number; number: number; status: string; }
 interface Participant { user: { id: number; name: string; email: string; avatar: string | null; whatsapp: string | null }; tickets: ParticipantTicket[]; }
-interface Winner { position: number; number: number; user: { id: number; name: string; email: string; avatar: string | null; whatsapp: string | null } | null; }
+interface Winner { position: number; number: number; prize: string | null; user: { id: number; name: string; email: string; avatar: string | null; whatsapp: string | null } | null; }
 
 export default function Admin() {
   const { user, loading: authLoading } = useAuth();
@@ -47,7 +47,7 @@ export default function Admin() {
   const [orderSearchInput, setOrderSearchInput] = useState('');
   const [orderViewMode, setOrderViewMode] = useState<'cart' | 'pending'>('pending');
   const [raffles, setRaffles] = useState<Raffle[]>([]);
-  const [raffleForm, setRaffleForm] = useState({ name: '', ticket_price: '', start_time: '', end_time: '', prizes_count: '1', cart_expiry_minutes: '10' });
+  const [raffleForm, setRaffleForm] = useState<{ name: string; ticket_price: string; start_time: string; end_time: string; prizes_count: string; cart_expiry_minutes: string; prizes: string[] }>({ name: '', ticket_price: '', start_time: '', end_time: '', prizes_count: '1', cart_expiry_minutes: '5', prizes: [''] });
   const [selectedRaffle, setSelectedRaffle] = useState<Raffle | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [winners, setWinners] = useState<Winner[] | null>(null);
@@ -63,6 +63,7 @@ export default function Admin() {
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [inviteLoading, setInviteLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [formError, setFormError] = useState('');
   const allOrdersRef = useRef(allOrders);
   const fetchDataRef = useRef<() => void>(() => {});
   const activeTabRef = useRef(activeTab);
@@ -376,14 +377,20 @@ export default function Admin() {
 
   const handleCreateRaffle = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError('');
     try {
-      await api.post('/raffles', raffleForm);
+      await api.post('/raffles', { ...raffleForm, prizes: raffleForm.prizes.map(p => ({ description: p })) });
       toast.success('Sorteo creado correctamente.');
-      setRaffleForm({ name: '', ticket_price: '', start_time: '', end_time: '', prizes_count: '1', cart_expiry_minutes: '10' });
+      setRaffleForm({ name: '', ticket_price: '', start_time: '', end_time: '', prizes_count: '1', cart_expiry_minutes: '5', prizes: [''] });
       fetchData();
     } catch (err: unknown) {
       const apiErr = err as { data?: { message?: string } };
-      toast.error(apiErr.data?.message || 'Error al crear sorteo');
+      const msg = apiErr.data?.message || 'Error al crear sorteo';
+      if (msg.toLowerCase().includes('fecha') || msg.toLowerCase().includes('inicio')) {
+        setFormError(msg);
+      } else {
+        toast.error(msg);
+      }
     }
   };
 
@@ -499,13 +506,15 @@ export default function Admin() {
                             <div>
                               <p className="font-semibold text-gray-800">
                                 {u.name}
-                                {u.role === 'super_admin' && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded ml-1">admin</span>}
+                                {u.role === 'super_admin' && <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded ml-1">super_admin</span>}
+                                {u.role === 'admin' && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded ml-1">admin</span>}
+                                {u.role === 'user' && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded ml-1">usuario</span>}
                                 {u.status === 'blocked' && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded ml-1">bloqueado</span>}
                                 {u.status === 'pending_approval' && <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded ml-1">pendiente</span>}
                                 {u.status === 'rejected' && <span className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded ml-1">rechazado</span>}
                               </p>
                               <p className="text-sm text-gray-500">{u.email}{u.whatsapp ? ` · ${u.whatsapp}` : ''}</p>
-                              <p className="text-xs text-gray-400">Registrado: {new Date(u.created_at).toLocaleDateString('es-AR')}</p>
+                              <p className="text-xs text-gray-400">Registrado: {new Date(u.created_at).toLocaleDateString('es-AR')}{u.role === 'user' && u.admin ? ` · Admin: ${u.admin.name}` : ''}</p>
                             </div>
                             <div className="flex items-center gap-3 shrink-0">
                               {u.status === 'pending_approval' ? (
@@ -687,7 +696,10 @@ export default function Admin() {
                             <div key={w.position} className="flex flex-wrap items-center justify-between gap-2 bg-white rounded-lg p-3">
                               <div className="flex items-center gap-2">
                                 <span className="bg-yellow-400 text-yellow-900 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm">{w.position}°</span>
-                                <span className="font-bold text-lg text-green-800">N° {w.number}</span>
+                                <div>
+                                  <span className="font-bold text-lg text-green-800">N° {w.number}</span>
+                                  <p className="text-sm text-green-600 font-semibold">{w.prize || `Premio ${w.position}`}</p>
+                                </div>
                               </div>
                               {w.user ? (
                                 <div className="flex items-center gap-2">
@@ -769,7 +781,7 @@ export default function Admin() {
               ) : (
                 <>
                   <h2 className="text-xl font-bold text-gray-800 mb-4 inline-flex items-center gap-2"><Dice5 className="text-green-600" size={22} /> Gestionar sorteos</h2>
-                  {(() => {
+                  {user?.role !== 'super_admin' && (() => {
                     const activeCount = raffles.filter((r) => r.is_active).length;
                     return (
                       <div className={`rounded-lg p-3 mb-4 text-sm font-semibold ${activeCount >= 5 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
@@ -777,7 +789,7 @@ export default function Admin() {
                       </div>
                     );
                   })()}
-                  <form onSubmit={handleCreateRaffle} className="bg-gray-50 rounded-lg p-4 mb-6">
+                  {user?.role !== 'super_admin' && <form onSubmit={handleCreateRaffle} className="bg-gray-50 rounded-lg p-4 mb-6">
                     <h3 className="font-semibold text-gray-700 mb-3 inline-flex items-center gap-2"><PenLine className="text-green-600" size={20} /> Crear nuevo sorteo</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
                       <input type="text" value={raffleForm.name} onChange={(e) => setRaffleForm({ ...raffleForm, name: e.target.value })} placeholder="Nombre del sorteo" className="px-4 py-2 rounded-lg border border-gray-300 outline-none" required />
@@ -786,7 +798,8 @@ export default function Admin() {
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                       <div>
                         <label className="block text-xs text-gray-500 mb-1 font-semibold">Desde (inicio)</label>
-                        <input type="datetime-local" value={raffleForm.start_time} onChange={(e) => setRaffleForm({ ...raffleForm, start_time: e.target.value })} className="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none" required />
+                        <input type="datetime-local" value={raffleForm.start_time} onChange={(e) => { setRaffleForm({ ...raffleForm, start_time: e.target.value }); setFormError(''); }} className={`w-full px-4 py-2 rounded-lg border outline-none ${formError ? 'border-red-500 bg-red-50' : 'border-gray-300'}`} required />
+                        {formError && <p className="text-xs text-red-600 mt-1">{formError}</p>}
                       </div>
                       <div>
                         <label className="block text-xs text-gray-500 mb-1 font-semibold">Hasta (fin)</label>
@@ -794,7 +807,14 @@ export default function Admin() {
                       </div>
                       <div>
                         <label className="block text-xs text-gray-500 mb-1 font-semibold">Cant. de premios</label>
-                        <select value={raffleForm.prizes_count} onChange={(e) => setRaffleForm({ ...raffleForm, prizes_count: e.target.value })} className="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none bg-white">
+                        <select value={raffleForm.prizes_count} onChange={(e) => {
+                          const count = parseInt(e.target.value);
+                          setRaffleForm(prev => ({
+                            ...prev,
+                            prizes_count: e.target.value,
+                            prizes: Array.from({ length: count }, (_, i) => prev.prizes[i] || ''),
+                          }));
+                        }} className="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none bg-white">
                           {[1,2,3,4,5,6,7,8,9,10].map((n) => <option key={n} value={n}>{n} {n === 1 ? 'premio' : 'premios'}</option>)}
                         </select>
                       </div>
@@ -803,8 +823,20 @@ export default function Admin() {
                         <input type="number" min="1" max="120" value={raffleForm.cart_expiry_minutes} onChange={(e) => setRaffleForm({ ...raffleForm, cart_expiry_minutes: e.target.value })} className="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none" />
                       </div>
                     </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+                      {Array.from({ length: parseInt(raffleForm.prizes_count) }, (_, i) => (
+                        <div key={i}>
+                          <label className="block text-xs text-gray-500 mb-1 font-semibold">Describí premio {i + 1}</label>
+                          <input type="text" value={raffleForm.prizes[i] || ''} onChange={(e) => {
+                            const next = [...raffleForm.prizes];
+                            next[i] = e.target.value;
+                            setRaffleForm({ ...raffleForm, prizes: next });
+                          }} placeholder={i === 0 ? 'Ej: 1 batidora' : i === 1 ? 'Ej: colchón 2 plazas' : `Descripción premio ${i + 1}`} className="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none" />
+                        </div>
+                      ))}
+                    </div>
                     <Tooltip text="Crear un nuevo sorteo con los datos ingresados"><button type="submit" className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg transition inline-flex items-center gap-2"><PenLine size={18} /> Crear sorteo</button></Tooltip>
-                  </form>
+                  </form>}
 
                   {loading ? <p className="text-gray-500">Cargando...</p> : (
                     <div className="space-y-3">
@@ -812,11 +844,18 @@ export default function Admin() {
                         <div key={r.id} className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 bg-gray-50 rounded-lg p-4">
                           <div className="min-w-0">
                             <p className="font-semibold text-gray-800 break-words">{r.name}</p>
-                            <p className="text-sm text-gray-500 break-words">Estado: {r.is_active ? 'Activo' : 'Inactivo'} | Precio: ${r.ticket_price} | Premios: {r.prizes_count} | Exp. carrito: {r.cart_expiry_minutes ?? 10} min | Inicio: {new Date(r.start_time).toLocaleString('es-AR')} | Fin: {new Date(r.end_time).toLocaleString('es-AR')} {r.drawn_at ? <span className="inline-flex items-center gap-1">| <Check className="text-green-600" size={14} /> Sorteado</span> : ''}</p>
+                            <p className="text-sm text-gray-500 break-words">Estado: {r.is_active ? 'Activo' : 'Inactivo'} | Precio: ${r.ticket_price} | Premios: {r.prizes_count} | Exp. carrito: {r.cart_expiry_minutes ?? 5} min | Inicio: {new Date(r.start_time).toLocaleString('es-AR')} | Fin: {new Date(r.end_time).toLocaleString('es-AR')}{r.admin ? ` | Admin: ${r.admin.name}` : ''} {r.drawn_at ? <span className="inline-flex items-center gap-1">| <Check className="text-green-600" size={14} /> Sorteado</span> : ''}</p>
+                            {r.prizes && r.prizes.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {r.prizes.map((p: { description: string }, i: number) => (
+                                  <span key={i} className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs font-semibold">{i + 1}°: {p.description}</span>
+                                ))}
+                              </div>
+                            )}
                           </div>
                           <div className="flex flex-wrap gap-2">
                             <Tooltip text="Ver participantes"><button onClick={() => handleViewParticipants(r)} className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-lg transition inline-flex items-center justify-center"><Eye size={16} /></button></Tooltip>
-                            {r.can_edit && (
+                            {r.can_edit && user?.role !== 'super_admin' && (
                               <>
                                 <Tooltip text="Editar sorteo (solo si no empezó y no tiene apuestas)"><button onClick={() => handleOpenEditRaffle(r)} className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition inline-flex items-center gap-1"><PencilIcon size={16} /> Editar</button></Tooltip>
                                 <Tooltip text="Eliminar sorteo (solo si no empezó y no tiene apuestas)"><button onClick={() => handleOpenDeleteRaffle(r.id)} className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition inline-flex items-center gap-1"><Trash2 size={16} /> Eliminar</button></Tooltip>

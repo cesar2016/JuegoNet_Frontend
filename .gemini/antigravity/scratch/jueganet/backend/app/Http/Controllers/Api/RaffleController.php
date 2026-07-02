@@ -89,6 +89,8 @@ class RaffleController extends Controller
             'duration_hours' => 'nullable|numeric|min:1',
             'ticket_price' => 'required|numeric|min:0',
             'prizes_count' => 'nullable|integer|min:1|max:10',
+            'prizes' => 'nullable|array',
+            'prizes.*.description' => 'nullable|string|max:255',
             'cart_expiry_minutes' => 'nullable|integer|min:1|max:120',
         ]);
 
@@ -103,6 +105,12 @@ class RaffleController extends Controller
         }
 
         $validated['prizes_count'] ??= 1;
+        $validated['cart_expiry_minutes'] ??= 5;
+
+        if (isset($validated['prizes']) && count($validated['prizes']) !== (int) $validated['prizes_count']) {
+            return response()->json(['message' => 'La cantidad de premios no coincide con las descripciones.'], 422);
+        }
+
         unset($validated['duration_hours']);
 
         $raffle = DB::transaction(function () use ($validated, $request) {
@@ -182,11 +190,13 @@ class RaffleController extends Controller
             ->keyBy('number');
 
         $winners = [];
+        $prizes = $raffle->prizes ?? [];
         foreach ($raffle->winning_numbers as $position => $number) {
             $ticket = $tickets->get($number);
             $winners[] = [
                 'position' => $position + 1,
                 'number' => $number,
+                'prize' => $prizes[$position]['description'] ?? null,
                 'user' => $ticket?->user ? [
                     'id' => $ticket->user->id,
                     'name' => $ticket->user->name,
@@ -237,7 +247,7 @@ class RaffleController extends Controller
         if ($user && $user->isAdmin() && ! $user->isSuperAdmin()) {
             $query->where('admin_id', $user->id);
         }
-        $raffles = $query->get()->map(function (Raffle $r) {
+        $raffles = $query->with('admin:id,name')->get()->map(function (Raffle $r) {
             $hasBets = $r->tickets()->whereIn('status', ['in_cart', 'pending_admin', 'sold'])->exists();
             $canEdit = now()->lessThan($r->start_time) && ! $hasBets;
 
@@ -248,12 +258,14 @@ class RaffleController extends Controller
                 'end_time' => $r->end_time,
                 'ticket_price' => $r->ticket_price,
                 'prizes_count' => $r->prizes_count,
+                'prizes' => $r->prizes ?? [],
                 'cart_expiry_minutes' => $r->cart_expiry_minutes,
                 'winning_numbers' => $r->winning_numbers,
                 'drawn_at' => $r->drawn_at,
                 'is_active' => $r->is_active,
                 'created_at' => $r->created_at,
                 'updated_at' => $r->updated_at,
+                'admin' => $r->admin ? ['id' => $r->admin->id, 'name' => $r->admin->name] : null,
                 'can_edit' => $canEdit,
             ];
         });
@@ -289,12 +301,18 @@ class RaffleController extends Controller
             'end_time' => 'sometimes|date|after:start_time',
             'ticket_price' => 'sometimes|numeric|min:0',
             'prizes_count' => 'nullable|integer|min:1|max:10',
+            'prizes' => 'nullable|array',
+            'prizes.*.description' => 'nullable|string|max:255',
             'cart_expiry_minutes' => 'nullable|integer|min:1|max:120',
             'is_active' => 'sometimes|boolean',
         ]);
 
         if (! $this->isEditable($raffle)) {
             return response()->json(['message' => 'No se puede modificar un sorteo que ya comenzó o tiene apuestas.'], 422);
+        }
+
+        if (isset($validated['prizes']) && isset($validated['prizes_count']) && count($validated['prizes']) !== (int) $validated['prizes_count']) {
+            return response()->json(['message' => 'La cantidad de premios no coincide con las descripciones.'], 422);
         }
 
         if (isset($validated['start_time'])) {

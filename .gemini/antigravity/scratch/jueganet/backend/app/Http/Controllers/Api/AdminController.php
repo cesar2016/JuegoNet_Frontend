@@ -341,7 +341,7 @@ class AdminController extends Controller
             $perPage = 10;
         }
 
-        $users = $query->orderBy('created_at', 'desc')->paginate($perPage);
+        $users = $query->with('admin:id,name')->orderBy('created_at', 'desc')->paginate($perPage);
 
         return response()->json($users);
     }
