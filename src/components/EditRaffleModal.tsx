@@ -10,6 +10,7 @@ interface Raffle {
   end_time: string;
   ticket_price: string;
   prizes_count: number;
+  prizes: { description: string }[];
   cart_expiry_minutes?: number;
 }
 
@@ -21,13 +22,14 @@ interface EditRaffleModalProps {
 }
 
 export default function EditRaffleModal({ isOpen, onClose, raffle, onSave }: EditRaffleModalProps) {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{ name: string; ticket_price: string; start_time: string; end_time: string; prizes_count: string; cart_expiry_minutes: string; prizes: string[] }>({
     name: '',
     ticket_price: '',
     start_time: '',
     end_time: '',
     prizes_count: '1',
-    cart_expiry_minutes: '10',
+    cart_expiry_minutes: '5',
+    prizes: [''],
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -40,7 +42,8 @@ export default function EditRaffleModal({ isOpen, onClose, raffle, onSave }: Edi
         start_time: raffle.start_time.replace('Z', '').split('.')[0],
         end_time: raffle.end_time.replace('Z', '').split('.')[0],
         prizes_count: String(raffle.prizes_count),
-        cart_expiry_minutes: String(raffle.cart_expiry_minutes ?? 10),
+        cart_expiry_minutes: String(raffle.cart_expiry_minutes ?? 5),
+        prizes: raffle.prizes?.map((p: { description: string }) => p.description) ?? Array(raffle.prizes_count).fill(''),
       });
       setError('');
     }
@@ -52,7 +55,7 @@ export default function EditRaffleModal({ isOpen, onClose, raffle, onSave }: Edi
     setLoading(true);
     setError('');
     try {
-      await api.put(`/raffles/${raffle.id}`, form);
+      await api.put(`/raffles/${raffle.id}`, { ...form, prizes: form.prizes.map(p => ({ description: p })) });
       onSave();
       onClose();
     } catch (err: unknown) {
@@ -118,13 +121,33 @@ export default function EditRaffleModal({ isOpen, onClose, raffle, onSave }: Edi
             <label className="block text-sm font-semibold text-gray-700 mb-1">Cantidad de premios</label>
             <select
               value={form.prizes_count}
-              onChange={(e) => setForm({ ...form, prizes_count: e.target.value })}
+              onChange={(e) => {
+                const count = parseInt(e.target.value);
+                setForm(prev => ({
+                  ...prev,
+                  prizes_count: e.target.value,
+                  prizes: Array.from({ length: count }, (_, i) => prev.prizes[i] || ''),
+                }));
+              }}
               className="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none focus:border-green-500 bg-white"
             >
               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                 <option key={n} value={n}>{n} {n === 1 ? 'premio' : 'premios'}</option>
               ))}
             </select>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {Array.from({ length: parseInt(form.prizes_count) }, (_, i) => (
+              <div key={i}>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Describí premio {i + 1}</label>
+                <input type="text" value={form.prizes[i] || ''} onChange={(e) => {
+                  const next = [...form.prizes];
+                  next[i] = e.target.value;
+                  setForm({ ...form, prizes: next });
+                }} placeholder={i === 0 ? 'Ej: 1 batidora' : i === 1 ? 'Ej: colchón 2 plazas' : `Descripción premio ${i + 1}`} className="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none focus:border-green-500" />
+              </div>
+            ))}
           </div>
 
           <div>

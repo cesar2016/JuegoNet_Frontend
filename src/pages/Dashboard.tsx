@@ -6,17 +6,18 @@ import { getEcho } from '../lib/echo';
 import SuperCountdown from '../components/SuperCountdown';
 import BoardGrid from '../components/BoardGrid';
 import Cart from '../components/Cart';
+import Modal from '../components/Modal';
 import confetti from 'canvas-confetti';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { Target, Eye, Loader, Trophy, Search, PartyPopper } from 'lucide-react';
+import { Target, Eye, Loader, Trophy, Search, PartyPopper, Gift } from 'lucide-react';
 
-interface Raffle { id: number; name: string; start_time: string; end_time: string; ticket_price: string; prizes_count?: number; drawn_at?: string | null; }
+interface Raffle { id: number; name: string; start_time: string; end_time: string; ticket_price: string; prizes_count?: number; prizes?: { description: string }[]; drawn_at?: string | null; }
 interface TicketUser { name: string; avatar: string | null; }
 interface Ticket { id: number; number: number; status: string; user_id: number | null; user: TicketUser | null; }
 interface CartData { id: number; total_price: string; tickets: { id: number; number: number }[]; raffle: { ticket_price: string }; }
 interface PendingOrderData { id: number; total_price: string; confirmed_at: string; tickets: { id: number; number: number }[]; raffle: { ticket_price: string }; }
-interface Winner { position: number; number: number; user: { id: number; name: string; email: string; avatar: string | null } | null; }
+interface Winner { position: number; number: number; prize: string | null; user: { id: number; name: string; email: string; avatar: string | null } | null; }
 
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
@@ -35,6 +36,7 @@ export default function Dashboard() {
   const [selectedFinished, setSelectedFinished] = useState<Raffle | null>(null);
   const [winners, setWinners] = useState<Winner[]>([]);
   const [resultsLoading, setResultsLoading] = useState(false);
+  const [showPrizes, setShowPrizes] = useState(false);
 
   // DEBUG: log tickets state changes
   useEffect(() => {
@@ -274,7 +276,7 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
               <div className="lg:col-span-3">
                 <div className="bg-white/10 backdrop-blur-md rounded-xl p-4">
-                  <h2 className="text-white text-xl font-bold mb-4">{selectedRaffle ? selectedRaffle.name : <span className="inline-flex items-center gap-2"><Target size={20} /> Tablero de números</span>}{isAdmin && <span className="text-sm font-normal text-white/60 ml-2">· <Eye size={16} className="inline" /> Modo visita</span>}</h2>
+                  <h2 className="text-white text-xl font-bold mb-4">{selectedRaffle ? <span className="inline-flex items-center gap-2">{selectedRaffle.name}{selectedRaffle.prizes && selectedRaffle.prizes.length > 0 && <button onClick={() => setShowPrizes(true)} className="inline-flex items-center gap-1 text-sm font-normal text-yellow-300 hover:text-yellow-100 transition-colors underline decoration-yellow-300/40 hover:decoration-yellow-100/60"><Gift size={16} /> Ver premios</button>}</span> : <span className="inline-flex items-center gap-2"><Target size={20} /> Tablero de números</span>}{isAdmin && <span className="text-sm font-normal text-white/60 ml-2">· <Eye size={16} className="inline" /> Modo visita</span>}</h2>
                   {loading && tickets.length === 0 ? (
                     <div className="text-white/60 text-center py-12 inline-flex items-center gap-2"><Loader size={20} className="animate-spin" /> Cargando números...</div>
                   ) : (
@@ -340,6 +342,7 @@ export default function Dashboard() {
                           <span className="bg-yellow-400 text-yellow-900 w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg">{w.position}°</span>
                           <div>
                             <p className="text-lg sm:text-xl font-bold text-green-700">N° {w.number}</p>
+                            <p className="text-sm text-green-600 font-semibold">{w.prize || `Premio ${w.position}`}</p>
                             <p className="text-xs text-gray-400">{selectedFinished.name}</p>
                           </div>
                         </div>
@@ -373,6 +376,26 @@ export default function Dashboard() {
             )}
           </div>
         )}
+
+        <Modal isOpen={showPrizes} onClose={() => setShowPrizes(false)} title={<span className="inline-flex items-center gap-2"><Gift className="text-yellow-500" size={22} /> Premios del sorteo</span>}>
+          <div className="space-y-4">
+            {selectedRaffle?.prizes?.map((p, i) => (
+              <div key={i} className="flex items-start gap-4 bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 rounded-xl p-4 shadow-sm">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center text-white font-bold text-sm shadow">
+                  {i + 1}°
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-yellow-800 uppercase tracking-wide">Premio {i + 1}</p>
+                  <p className="text-lg font-bold text-gray-800 mt-0.5 break-words">{p.description || `Premio ${i + 1}`}</p>
+                </div>
+                <Gift size={20} className="text-yellow-400 flex-shrink-0 mt-1" />
+              </div>
+            ))}
+            {(!selectedRaffle?.prizes || selectedRaffle.prizes.length === 0) && (
+              <p className="text-gray-500 text-center py-8">No se configuraron premios para este sorteo.</p>
+            )}
+          </div>
+        </Modal>
       </main>
     </div>
   );
