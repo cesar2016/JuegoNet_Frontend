@@ -31,28 +31,37 @@ class AuthController extends Controller
                 return response()->json(['message' => 'El enlace de invitación no es válido o expiró.'], 400);
             }
 
-            if (User::where('admin_id', $invite->admin_id)->count() >= 100) {
+            $invitingAdmin = $invite->admin;
+            $isSuper = $invitingAdmin && $invitingAdmin->isSuperAdmin();
+
+            if (! $isSuper && User::where('admin_id', $invite->admin_id)->count() >= 100) {
                 return response()->json(['message' => 'El administrador alcanzó el límite de 100 usuarios.'], 422);
             }
 
             $adminId = $invite->admin_id;
         }
 
+        $isFromSuper = isset($isSuper) && $isSuper;
+
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'status' => 'pending_approval',
-            'role' => 'user',
+            'status' => $isFromSuper ? 'approved' : 'pending_approval',
+            'role' => $isFromSuper ? 'admin' : 'user',
             'admin_id' => $adminId,
         ]);
 
         if ($adminId) {
-            broadcast(new AdminNotification($adminId, 'pending_users_updated'));
+            broadcast(new AdminNotification($adminId, $isFromSuper ? 'admin_users_updated' : 'pending_users_updated'));
         }
 
+        $message = $isFromSuper
+            ? 'Registro exitoso. Ya tienes acceso de administrador.'
+            : 'Registro exitoso. Espera la aprobación del administrador.';
+
         return response()->json([
-            'message' => 'Registro exitoso. Espera la aprobación del administrador.',
+            'message' => $message,
             'user' => $user,
         ], 201);
     }
