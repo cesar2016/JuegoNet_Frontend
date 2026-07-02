@@ -140,15 +140,11 @@ class OrderController extends Controller
             $ticketCount = $cart->tickets()->count();
 
             if ($raffle->admin_id) {
-                try {
-                    broadcast(new AdminNotification($raffle->admin_id, 'new_pending_order', [
-                        'order_id' => $cart->id,
-                        'total_price' => $cart->total_price,
-                        'tickets_count' => $ticketCount,
-                    ]));
-                } catch (\Throwable $e) {
-                    Log::error('Broadcast AdminNotification failed', ['error' => $e->getMessage()]);
-                }
+                $this->broadcastToAdminAndSuperAdmins($raffle->admin_id, 'new_pending_order', [
+                    'order_id' => $cart->id,
+                    'total_price' => $cart->total_price,
+                    'tickets_count' => $ticketCount,
+                ]);
             }
 
             $expiresAt = now()->addMinutes($raffle->cart_expiry_minutes ?? 10);
@@ -194,30 +190,22 @@ class OrderController extends Controller
                 $order->delete();
 
                 if ($order->raffle->admin_id) {
-                    try {
-                        broadcast(new AdminNotification($order->raffle->admin_id, 'new_pending_order', [
-                            'order_id' => $order->id,
-                            'tickets_count' => 0,
-                            'deleted' => true,
-                        ]));
-                    } catch (\Throwable $e) {
-                        Log::error('Broadcast AdminNotification failed', ['error' => $e->getMessage()]);
-                    }
+                    $this->broadcastToAdminAndSuperAdmins($order->raffle->admin_id, 'new_pending_order', [
+                        'order_id' => $order->id,
+                        'tickets_count' => 0,
+                        'deleted' => true,
+                    ]);
                 }
 
                 return response()->json(['message' => 'Número eliminado. Carrito vacío.'], 200);
             }
 
             if ($order->raffle->admin_id) {
-                try {
-                    broadcast(new AdminNotification($order->raffle->admin_id, 'new_pending_order', [
-                        'order_id' => $order->id,
-                        'total_price' => $order->total_price,
-                        'tickets_count' => $ticketCount,
-                    ]));
-                } catch (\Throwable $e) {
-                    Log::error('Broadcast AdminNotification failed', ['error' => $e->getMessage()]);
-                }
+                $this->broadcastToAdminAndSuperAdmins($order->raffle->admin_id, 'new_pending_order', [
+                    'order_id' => $order->id,
+                    'total_price' => $order->total_price,
+                    'tickets_count' => $ticketCount,
+                ]);
             }
 
             return response()->json([
@@ -281,16 +269,12 @@ class OrderController extends Controller
             }
 
             if ($raffle && $raffle->admin_id) {
-                try {
-                    broadcast(new AdminNotification($raffle->admin_id, 'new_pending_order', [
-                        'order_id' => $freshCart->id,
-                        'total_price' => $freshCart->total_price,
-                        'tickets_count' => $freshCart->tickets->count(),
-                        'status' => $freshCart->status,
-                    ]));
-                } catch (\Throwable $e) {
-                    Log::error('Broadcast AdminNotification failed', ['error' => $e->getMessage()]);
-                }
+                $this->broadcastToAdminAndSuperAdmins($raffle->admin_id, 'new_pending_order', [
+                    'order_id' => $freshCart->id,
+                    'total_price' => $freshCart->total_price,
+                    'tickets_count' => $freshCart->tickets->count(),
+                    'status' => $freshCart->status,
+                ]);
             }
 
             return response()->json([

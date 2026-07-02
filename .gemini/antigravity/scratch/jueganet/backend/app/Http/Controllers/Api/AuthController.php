@@ -53,7 +53,7 @@ class AuthController extends Controller
         ]);
 
         if ($adminId) {
-            broadcast(new AdminNotification($adminId, $isFromSuper ? 'admin_users_updated' : 'pending_users_updated'));
+            $this->broadcastToAdminAndSuperAdmins($adminId, $isFromSuper ? 'admin_users_updated' : 'pending_users_updated');
         }
 
         $message = $isFromSuper

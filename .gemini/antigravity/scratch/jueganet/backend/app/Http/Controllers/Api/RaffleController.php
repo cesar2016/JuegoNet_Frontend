@@ -7,6 +7,7 @@ use App\Events\TicketStatusChanged;
 use App\Http\Controllers\Controller;
 use App\Models\Raffle;
 use App\Models\Ticket;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -113,6 +114,7 @@ class RaffleController extends Controller
 
         unset($validated['duration_hours']);
 
+        $adminId = $request->user()->id;
         $raffle = DB::transaction(function () use ($validated, $request) {
             $raffle = Raffle::create([
                 ...$validated,
@@ -131,7 +133,7 @@ class RaffleController extends Controller
             return $raffle;
         });
 
-        broadcast(new AdminNotification($request->user()->id, 'raffle_list_updated'));
+        $this->broadcastRaffleListUpdated($adminId);
 
         return response()->json($raffle, 201);
     }
@@ -287,7 +289,7 @@ class RaffleController extends Controller
 
         $raffle->update(['is_active' => ! $raffle->is_active]);
 
-        broadcast(new AdminNotification($request->user()->id, 'raffle_list_updated'));
+        $this->broadcastRaffleListUpdated($request->user()->id);
 
         return response()->json(['message' => 'Estado actualizado.', 'raffle' => $raffle->fresh()]);
     }
@@ -331,6 +333,8 @@ class RaffleController extends Controller
 
         $raffle->update($validated);
 
+        $this->broadcastRaffleListUpdated($raffle->admin_id);
+
         return response()->json($raffle);
     }
 
@@ -341,9 +345,12 @@ class RaffleController extends Controller
             return response()->json(['message' => 'No se puede eliminar un sorteo que ya comenzó o tiene apuestas.'], 422);
         }
 
+        $deletedAdminId = $raffle->admin_id;
         $raffle->tickets()->delete();
         $raffle->orders()->delete();
         $raffle->delete();
+
+        $this->broadcastRaffleListUpdated($deletedAdminId);
 
         return response()->json(['message' => 'Sorteo eliminado correctamente.']);
     }
@@ -418,7 +425,7 @@ class RaffleController extends Controller
             'is_active' => false,
         ]);
 
-        broadcast(new AdminNotification($raffle->admin_id, 'raffle_list_updated'));
+        $this->broadcastRaffleListUpdated($raffle->admin_id);
 
         return response()->json([
             'message' => 'Resultados declarados.',
@@ -557,5 +564,10 @@ class RaffleController extends Controller
                 ]);
             }
         }
+    }
+
+    private function broadcastRaffleListUpdated(int $adminId): void
+    {
+        $this->broadcastToAdminAndSuperAdmins($adminId, 'raffle_list_updated');
     }
 }

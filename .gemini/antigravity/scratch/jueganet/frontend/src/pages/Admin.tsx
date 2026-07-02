@@ -96,11 +96,13 @@ export default function Admin() {
       if (eventName !== 'AdminNotification') return;
       console.log('[Admin] AdminNotification received:', e);
       refreshBadges();
-      // Reload the table only when an order is confirmed (needs admin attention)
       if (e.type === 'new_pending_order' && e.data?.status === 'pending_admin') {
         if (activeTabRef.current === 'orders') fetchDataRef.current();
       }
       if (e.type === 'pending_users_updated' && activeTabRef.current === 'users') {
+        fetchDataRef.current();
+      }
+      if (e.type === 'raffle_list_updated' && activeTabRef.current === 'raffles') {
         fetchDataRef.current();
       }
     };

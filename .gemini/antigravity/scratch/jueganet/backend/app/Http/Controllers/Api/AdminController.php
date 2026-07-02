@@ -57,7 +57,7 @@ class AdminController extends Controller
         $user->update(['status' => 'approved']);
 
         if ($user->admin_id) {
-            broadcast(new AdminNotification($user->admin_id, 'pending_users_updated'));
+            $this->broadcastToAdminAndSuperAdmins($user->admin_id, 'pending_users_updated');
         }
 
         return response()->json(['message' => 'Usuario aprobado.', 'user' => $user]);
@@ -132,10 +132,10 @@ class AdminController extends Controller
             }
 
             if ($freshOrder->raffle?->admin_id) {
-                broadcast(new AdminNotification($freshOrder->raffle->admin_id, 'new_pending_order', [
+                $this->broadcastToAdminAndSuperAdmins($freshOrder->raffle->admin_id, 'new_pending_order', [
                     'order_id' => $freshOrder->id,
                     'status' => $freshOrder->status,
-                ]));
+                ]);
             }
 
             return response()->json([
@@ -176,10 +176,10 @@ class AdminController extends Controller
             }
 
             if ($freshOrder->raffle?->admin_id) {
-                broadcast(new AdminNotification($freshOrder->raffle->admin_id, 'new_pending_order', [
+                $this->broadcastToAdminAndSuperAdmins($freshOrder->raffle->admin_id, 'new_pending_order', [
                     'order_id' => $freshOrder->id,
                     'status' => $freshOrder->status,
-                ]));
+                ]);
             }
 
             return response()->json([
