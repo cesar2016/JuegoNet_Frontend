@@ -12,7 +12,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { Target, Eye, Loader, Trophy, Search, PartyPopper, Gift } from 'lucide-react';
 
-interface Raffle { id: number; name: string; start_time: string; end_time: string; ticket_price: string; prizes_count?: number; prizes?: { description: string }[]; drawn_at?: string | null; }
+interface Raffle { id: number; name: string; start_time: string; end_time: string; ticket_price: string; prizes_count?: number; prizes?: { description: string }[]; max_number?: number; drawn_at?: string | null; }
 interface TicketUser { name: string; avatar: string | null; }
 interface Ticket { id: number; number: number; status: string; user_id: number | null; user: TicketUser | null; }
 interface CartData { id: number; total_price: string; tickets: { id: number; number: number }[]; raffle: { ticket_price: string }; }
@@ -280,7 +280,7 @@ export default function Dashboard() {
                   {loading && tickets.length === 0 ? (
                     <div className="text-white/60 text-center py-12 inline-flex items-center gap-2"><Loader size={20} className="animate-spin" /> Cargando números...</div>
                   ) : (
-                    <BoardGrid tickets={tickets} currentUserId={user?.id ?? null} onSelectNumber={handleSelectNumber} loading={loading} readOnly={isAdmin || !!pendingOrder} />
+                    <BoardGrid tickets={tickets} currentUserId={user?.id ?? null} onSelectNumber={handleSelectNumber} loading={loading} readOnly={isAdmin || !!pendingOrder} maxNumber={selectedRaffle?.max_number ?? 99} />
                   )}
                 </div>
               </div>

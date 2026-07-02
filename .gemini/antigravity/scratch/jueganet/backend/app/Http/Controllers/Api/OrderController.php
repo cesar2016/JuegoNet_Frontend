@@ -59,10 +59,15 @@ class OrderController extends Controller
     {
         $validated = $request->validate([
             'raffle_id' => 'required|exists:raffles,id',
-            'number' => 'required|integer|min:0|max:99',
+            'number' => 'required|integer|min:0',
         ]);
 
         $raffle = Raffle::findOrFail($validated['raffle_id']);
+
+        $maxNum = $raffle->max_number ?? 99;
+        if ($validated['number'] > $maxNum) {
+            return response()->json(['message' => "El número debe ser entre 00 y {$maxNum}."], 422);
+        }
 
         if (! $raffle->is_active || now()->gt($raffle->end_time)) {
             return response()->json(['message' => 'El sorteo no está activo.'], 400);

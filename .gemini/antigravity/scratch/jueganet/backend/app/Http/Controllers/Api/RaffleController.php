@@ -93,6 +93,7 @@ class RaffleController extends Controller
             'prizes' => 'nullable|array',
             'prizes.*.description' => 'nullable|string|max:255',
             'cart_expiry_minutes' => 'nullable|integer|min:1|max:120',
+            'max_number' => 'nullable|integer|min:99|max:500',
         ]);
 
         if (! ($validated['start_time'] ?? null)) {
@@ -107,22 +108,24 @@ class RaffleController extends Controller
 
         $validated['prizes_count'] ??= 1;
         $validated['cart_expiry_minutes'] ??= 5;
+        $validated['max_number'] ??= 99;
 
         if (isset($validated['prizes']) && count($validated['prizes']) !== (int) $validated['prizes_count']) {
             return response()->json(['message' => 'La cantidad de premios no coincide con las descripciones.'], 422);
         }
 
+        $maxNumber = (int) $validated['max_number'];
         unset($validated['duration_hours']);
 
         $adminId = $request->user()->id;
-        $raffle = DB::transaction(function () use ($validated, $request) {
+        $raffle = DB::transaction(function () use ($validated, $maxNumber, $request) {
             $raffle = Raffle::create([
                 ...$validated,
                 'is_active' => true,
                 'admin_id' => $request->user()->id,
             ]);
 
-            for ($i = 0; $i <= 99; $i++) {
+            for ($i = 0; $i <= $maxNumber; $i++) {
                 Ticket::create([
                     'raffle_id' => $raffle->id,
                     'number' => $i,
@@ -262,6 +265,7 @@ class RaffleController extends Controller
                 'prizes_count' => $r->prizes_count,
                 'prizes' => $r->prizes ?? [],
                 'cart_expiry_minutes' => $r->cart_expiry_minutes,
+                'max_number' => $r->max_number ?? 99,
                 'winning_numbers' => $r->winning_numbers,
                 'drawn_at' => $r->drawn_at,
                 'is_active' => $r->is_active,
@@ -388,9 +392,10 @@ class RaffleController extends Controller
     public function setResults(Request $request, Raffle $raffle): JsonResponse
     {
         $this->authorizeRaffle($request, $raffle);
+        $maxNum = $raffle->max_number ?? 99;
         $validated = $request->validate([
             'winning_numbers' => 'required|array|min:1|max:10',
-            'winning_numbers.*' => 'required|integer|min:0|max:99|distinct',
+            'winning_numbers.*' => "required|integer|min:0|max:{$maxNum}|distinct",
         ]);
 
         if (count($validated['winning_numbers']) > $raffle->prizes_count) {
