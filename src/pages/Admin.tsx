@@ -15,7 +15,7 @@ interface AllUser { id: number; name: string; email: string; whatsapp: string | 
 interface PaginatedUsers { data: AllUser[]; current_page: number; last_page: number; per_page: number; total: number; from: number | null; to: number | null; }
 interface OrderItem { order: { id: number; total_price: string; status: string; confirmed_at: string | null; user: { name: string; email: string }; raffle: { id: number; name: string } | null; tickets: { id: number; number: number }[]; created_at: string; }; remaining_seconds: number; }
 interface PaginatedOrders { data: OrderItem[]; current_page: number; last_page: number; per_page: number; total: number; from: number | null; to: number | null; }
-interface Raffle { id: number; name: string; is_active: boolean; start_time: string; end_time: string; ticket_price: string; prizes_count: number; prizes: { description: string }[]; cart_expiry_minutes?: number; winning_numbers: number[] | null; drawn_at: string | null; admin: { id: number; name: string } | null; can_edit?: boolean; }
+interface Raffle { id: number; name: string; is_active: boolean; start_time: string; end_time: string; ticket_price: string; prizes_count: number; prizes: { description: string }[]; cart_expiry_minutes?: number; max_number: number; winning_numbers: number[] | null; drawn_at: string | null; admin: { id: number; name: string } | null; can_edit?: boolean; }
 interface ParticipantTicket { id: number; number: number; status: string; }
 interface Participant { user: { id: number; name: string; email: string; avatar: string | null; whatsapp: string | null }; tickets: ParticipantTicket[]; }
 interface Winner { position: number; number: number; prize: string | null; user: { id: number; name: string; email: string; avatar: string | null; whatsapp: string | null } | null; }
@@ -47,7 +47,7 @@ export default function Admin() {
   const [orderSearchInput, setOrderSearchInput] = useState('');
   const [orderViewMode, setOrderViewMode] = useState<'cart' | 'pending'>('pending');
   const [raffles, setRaffles] = useState<Raffle[]>([]);
-  const [raffleForm, setRaffleForm] = useState<{ name: string; ticket_price: string; start_time: string; end_time: string; prizes_count: string; cart_expiry_minutes: string; prizes: string[] }>({ name: '', ticket_price: '', start_time: '', end_time: '', prizes_count: '1', cart_expiry_minutes: '5', prizes: [''] });
+  const [raffleForm, setRaffleForm] = useState<{ name: string; ticket_price: string; start_time: string; end_time: string; prizes_count: string; cart_expiry_minutes: string; max_number: string; prizes: string[] }>({ name: '', ticket_price: '', start_time: '', end_time: '', prizes_count: '1', cart_expiry_minutes: '5', max_number: '99', prizes: [''] });
   const [selectedRaffle, setSelectedRaffle] = useState<Raffle | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [winners, setWinners] = useState<Winner[] | null>(null);
@@ -383,7 +383,7 @@ export default function Admin() {
     try {
       await api.post('/raffles', { ...raffleForm, prizes: raffleForm.prizes.map(p => ({ description: p })) });
       toast.success('Sorteo creado correctamente.');
-      setRaffleForm({ name: '', ticket_price: '', start_time: '', end_time: '', prizes_count: '1', cart_expiry_minutes: '5', prizes: [''] });
+      setRaffleForm({ name: '', ticket_price: '', start_time: '', end_time: '', prizes_count: '1', cart_expiry_minutes: '5', max_number: '99', prizes: [''] });
       fetchData();
     } catch (err: unknown) {
       const apiErr = err as { data?: { message?: string } };
@@ -400,7 +400,8 @@ export default function Admin() {
     if (!selectedRaffle) return;
     const nums = winningInputs.map(Number);
     if (nums.some(isNaN) || new Set(nums).size !== nums.length) {
-      toast.error('Todos los números deben ser distintos y válidos (00-99).');
+      const maxN = selectedRaffle?.max_number ?? 99;
+      toast.error(`Todos los números deben ser distintos y válidos (00-${maxN}).`);
       return;
     }
     try {
@@ -722,12 +723,12 @@ export default function Admin() {
                   {!selectedRaffle.drawn_at && (
                     <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
                       <h3 className="font-bold text-green-800 mb-3 inline-flex items-center gap-2"><Trophy size={20} /> Declarar resultados</h3>
-                      <p className="text-sm text-green-600 mb-3">Ingresá los {selectedRaffle.prizes_count} números ganadores (del 00 al 99, distintos):</p>
+                      <p className="text-sm text-green-600 mb-3">Ingresá los {selectedRaffle.prizes_count} números ganadores (del 00 al {selectedRaffle.max_number ?? 99}, distintos):</p>
                       <div className="flex flex-wrap gap-3 mb-4">
                         {winningInputs.map((val, i) => (
                           <div key={i}>
                             <label className="block text-xs text-green-600 font-semibold mb-1">N° {i + 1}</label>
-                            <input type="number" min={0} max={99} value={val} onChange={(e) => { const next = [...winningInputs]; next[i] = e.target.value; setWinningInputs(next); }} className="w-20 px-3 py-2 rounded-lg border border-green-300 outline-none text-center" placeholder="##" />
+                            <input type="number" min={0} max={selectedRaffle.max_number ?? 99} value={val} onChange={(e) => { const next = [...winningInputs]; next[i] = e.target.value; setWinningInputs(next); }} className="w-20 px-3 py-2 rounded-lg border border-green-300 outline-none text-center" placeholder="##" />
                           </div>
                         ))}
                       </div>
@@ -797,7 +798,7 @@ export default function Admin() {
                       <input type="text" value={raffleForm.name} onChange={(e) => setRaffleForm({ ...raffleForm, name: e.target.value })} placeholder="Nombre del sorteo" className="px-4 py-2 rounded-lg border border-gray-300 outline-none" required />
                       <input type="number" step="0.01" value={raffleForm.ticket_price} onChange={(e) => setRaffleForm({ ...raffleForm, ticket_price: e.target.value })} placeholder="Precio por número" className="px-4 py-2 rounded-lg border border-gray-300 outline-none" required />
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
                       <div>
                         <label className="block text-xs text-gray-500 mb-1 font-semibold">Desde (inicio)</label>
                         <input type="datetime-local" value={raffleForm.start_time} onChange={(e) => { setRaffleForm({ ...raffleForm, start_time: e.target.value }); setFormError(''); }} className={`w-full px-4 py-2 rounded-lg border outline-none ${formError ? 'border-red-500 bg-red-50' : 'border-gray-300'}`} required />
@@ -824,6 +825,10 @@ export default function Admin() {
                         <label className="block text-xs text-gray-500 mb-1 font-semibold">Exp. carrito (min)</label>
                         <input type="number" min="1" max="120" value={raffleForm.cart_expiry_minutes} onChange={(e) => setRaffleForm({ ...raffleForm, cart_expiry_minutes: e.target.value })} className="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none" />
                       </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1 font-semibold">Números (0 a ...)</label>
+                        <input type="number" min="99" max="500" value={raffleForm.max_number} onChange={(e) => setRaffleForm({ ...raffleForm, max_number: e.target.value })} className="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none" />
+                      </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-4">
                       {Array.from({ length: parseInt(raffleForm.prizes_count) }, (_, i) => (
@@ -846,7 +851,7 @@ export default function Admin() {
                         <div key={r.id} className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 bg-gray-50 rounded-lg p-4">
                           <div className="min-w-0">
                             <p className="font-semibold text-gray-800 break-words">{r.name}</p>
-                            <p className="text-sm text-gray-500 break-words">Estado: {r.is_active ? 'Activo' : 'Inactivo'} | Precio: ${r.ticket_price} | Premios: {r.prizes_count} | Exp. carrito: {r.cart_expiry_minutes ?? 5} min | Inicio: {new Date(r.start_time).toLocaleString('es-AR')} | Fin: {new Date(r.end_time).toLocaleString('es-AR')}{r.admin ? ` | Admin: ${r.admin.name}` : ''} {r.drawn_at ? <span className="inline-flex items-center gap-1">| <Check className="text-green-600" size={14} /> Sorteado</span> : ''}</p>
+                            <p className="text-sm text-gray-500 break-words">Estado: {r.is_active ? 'Activo' : 'Inactivo'} | Precio: ${r.ticket_price} | Números: 00-{r.max_number ?? 99} | Premios: {r.prizes_count} | Exp. carrito: {r.cart_expiry_minutes ?? 5} min | Inicio: {new Date(r.start_time).toLocaleString('es-AR')} | Fin: {new Date(r.end_time).toLocaleString('es-AR')}{r.admin ? ` | Admin: ${r.admin.name}` : ''} {r.drawn_at ? <span className="inline-flex items-center gap-1">| <Check className="text-green-600" size={14} /> Sorteado</span> : ''}</p>
                             {r.prizes && r.prizes.length > 0 && (
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {r.prizes.map((p: { description: string }, i: number) => (

@@ -20,9 +20,10 @@ interface BoardGridProps {
   onSelectNumber: (number: number) => void;
   loading: boolean;
   readOnly?: boolean;
+  maxNumber?: number;
 }
 
-export default function BoardGrid({ tickets, currentUserId, onSelectNumber, loading, readOnly = false }: BoardGridProps) {
+export default function BoardGrid({ tickets, currentUserId, onSelectNumber, loading, readOnly = false, maxNumber = 99 }: BoardGridProps) {
   const isOtherUser = (ticket: Ticket) => ticket.user_id && ticket.user_id !== currentUserId;
 
     const getTicketStyle = (ticket: Ticket) => {
@@ -56,7 +57,7 @@ export default function BoardGrid({ tickets, currentUserId, onSelectNumber, load
               ${getTicketStyle(ticket)}
             `}
           >
-            <span className="text-2xl sm:text-3xl md:text-4xl leading-none tabular-nums">{String(ticket.number).padStart(2, '0')}</span>
+            <span className="text-2xl sm:text-3xl md:text-4xl leading-none tabular-nums">{String(ticket.number).padStart(String(maxNumber).length, '0')}</span>
             {ticket.status === 'in_cart' && (
               <div className={`absolute -bottom-2 -left-2 ${ticket.user_id === currentUserId ? 'bg-pink-300' : 'bg-sky-300'} rounded-full p-1 flex items-center justify-center`}>
                 <ShoppingCart size={14} className="text-black" />
