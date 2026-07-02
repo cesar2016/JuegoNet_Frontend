@@ -59,7 +59,7 @@ class OrderController extends Controller
     {
         $validated = $request->validate([
             'raffle_id' => 'required|exists:raffles,id',
-            'number' => 'required|integer|min:1|max:99',
+            'number' => 'required|integer|min:0|max:99',
         ]);
 
         $raffle = Raffle::findOrFail($validated['raffle_id']);

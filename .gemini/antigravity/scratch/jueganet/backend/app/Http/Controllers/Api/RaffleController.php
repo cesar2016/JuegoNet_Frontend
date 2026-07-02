@@ -107,7 +107,7 @@ class RaffleController extends Controller
                 'admin_id' => $request->user()->id,
             ]);
 
-            for ($i = 1; $i <= 99; $i++) {
+            for ($i = 0; $i <= 99; $i++) {
                 Ticket::create([
                     'raffle_id' => $raffle->id,
                     'number' => $i,
@@ -339,7 +339,7 @@ class RaffleController extends Controller
         $this->authorizeRaffle($request, $raffle);
         $validated = $request->validate([
             'winning_numbers' => 'required|array|min:1|max:10',
-            'winning_numbers.*' => 'required|integer|min:1|max:99|distinct',
+            'winning_numbers.*' => 'required|integer|min:0|max:99|distinct',
         ]);
 
         if (count($validated['winning_numbers']) > $raffle->prizes_count) {
