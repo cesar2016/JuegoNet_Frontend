@@ -80,6 +80,7 @@ export default function Admin() {
   const fetchDataRef = useRef<() => void>(() => {});
   const fetchAdminStatsRef = useRef<() => void>(() => {});
   const activeTabRef = useRef(activeTab);
+  const viewAdminStatsRef = useRef(viewAdminStats);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 1000);
@@ -115,8 +116,12 @@ export default function Admin() {
       if (e.type === 'pending_users_updated' && activeTabRef.current === 'users') {
         fetchDataRef.current();
       }
-      if (e.type === 'raffle_list_updated' && activeTabRef.current === 'raffles') {
-        fetchDataRef.current();
+      if (e.type === 'raffle_list_updated') {
+        if (activeTabRef.current === 'raffles') fetchDataRef.current();
+        if (viewAdminStatsRef.current) fetchAdminStatsRef.current();
+      }
+      if ((e.type === 'pending_users_updated' || e.type === 'admin_users_updated') && viewAdminStatsRef.current) {
+        fetchAdminStatsRef.current();
       }
     };
     echo.connector.pusher.bind_global(handler);
@@ -244,6 +249,7 @@ export default function Admin() {
   fetchDataRef.current = fetchData;
   fetchAdminStatsRef.current = fetchAdminStats;
   activeTabRef.current = activeTab;
+  viewAdminStatsRef.current = viewAdminStats;
 
   useEffect(() => {
     if (activeTab === 'raffles') {
