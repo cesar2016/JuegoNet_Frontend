@@ -52,6 +52,7 @@ Route::middleware(['auth:sanctum', 'check.status'])->group(function () {
         Route::post('/admin/upload-avatar', [AdminController::class, 'uploadAvatar']);
 
         Route::get('/admin/stats', [AdminController::class, 'stats']);
+        Route::get('/admin/admin-stats', [AdminController::class, 'adminStats']);
 
         Route::get('/admin/invite/latest', [AdminController::class, 'latestInvite']);
         Route::post('/admin/invite', [AdminController::class, 'generateInvite']);

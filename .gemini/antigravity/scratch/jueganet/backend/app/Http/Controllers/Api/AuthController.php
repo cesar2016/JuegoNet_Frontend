@@ -92,11 +92,13 @@ class AuthController extends Controller
             ], 403);
         }
 
+        $user->update(['last_login_at' => now()]);
+
         $token = $user->createToken('auth-token')->plainTextToken;
 
         return response()->json([
             'message' => 'Inicio de sesión exitoso.',
-            'user' => $user,
+            'user' => $user->fresh(),
             'token' => $token,
         ]);
     }

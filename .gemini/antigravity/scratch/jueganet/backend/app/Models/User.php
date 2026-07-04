@@ -22,6 +22,7 @@ class User extends Authenticatable
         'avatar',
         'whatsapp',
         'admin_id',
+        'last_login_at',
     ];
 
     protected $hidden = [
@@ -33,6 +34,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'last_login_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
@@ -75,5 +77,10 @@ class User extends Authenticatable
     public function tickets()
     {
         return $this->hasMany(Ticket::class);
+    }
+
+    public function raffles()
+    {
+        return $this->hasMany(Raffle::class, 'admin_id');
     }
 }

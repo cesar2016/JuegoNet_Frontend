@@ -367,6 +367,37 @@ class AdminController extends Controller
         return response()->json(['message' => 'Perfil actualizado.', 'user' => $user->fresh()]);
     }
 
+    public function adminStats(Request $request): JsonResponse
+    {
+        $perPage = min((int) $request->input('per_page', 10), 100);
+        $q = $request->input('q', '');
+
+        $query = User::whereIn('role', ['admin', 'super_admin'])
+            ->withCount([
+                'managedUsers',
+                'raffles as active_raffles_count' => function ($q) {
+                    $q->where('is_active', true)->whereNull('drawn_at');
+                },
+                'raffles as closed_raffles_count' => function ($q) {
+                    $q->whereNotNull('drawn_at');
+                },
+            ]);
+
+        if ($q) {
+            $query->where(function ($query) use ($q) {
+                $query->where('name', 'like', "%{$q}%")
+                    ->orWhere('email', 'like', "%{$q}%")
+                    ->orWhere('role', 'like', "%{$q}%");
+            });
+        }
+
+        $admins = $query->orderBy('role')
+            ->orderBy('name')
+            ->paginate($perPage, ['id', 'name', 'email', 'role', 'last_login_at']);
+
+        return response()->json($admins);
+    }
+
     public function blockUser(Request $request, User $user): JsonResponse
     {
         $authUser = $request->user();
