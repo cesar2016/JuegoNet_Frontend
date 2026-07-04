@@ -12,6 +12,8 @@ import 'react-toastify/dist/ReactToastify.css';
 import { Settings, Users, FileText, Dice5, Search, Check, X, Clock, ArrowLeft, Trophy, PenLine, Trash2, Pencil as PencilIcon, Eye, ShoppingCart, Link2, Copy, UserPlus } from 'lucide-react';
 
 interface AllUser { id: number; name: string; email: string; whatsapp: string | null; status: string; role: string; created_at: string; admin: { id: number; name: string } | null; }
+interface AdminStat { id: number; name: string; email: string; role: string; last_login_at: string | null; managed_users_count: number; active_raffles_count: number; closed_raffles_count: number; }
+interface PaginatedAdminStats { data: AdminStat[]; current_page: number; last_page: number; per_page: number; total: number; from: number | null; to: number | null; }
 interface PaginatedUsers { data: AllUser[]; current_page: number; last_page: number; per_page: number; total: number; from: number | null; to: number | null; }
 interface OrderItem { order: { id: number; total_price: string; status: string; confirmed_at: string | null; user: { name: string; email: string }; raffle: { id: number; name: string } | null; tickets: { id: number; number: number }[]; created_at: string; }; remaining_seconds: number; }
 interface PaginatedOrders { data: OrderItem[]; current_page: number; last_page: number; per_page: number; total: number; from: number | null; to: number | null; }
@@ -60,12 +62,23 @@ export default function Admin() {
   const [orderBadgeCount, setOrderBadgeCount] = useState(0);
   const [userBadgeCount, setUserBadgeCount] = useState(0);
   const [now, setNow] = useState(Date.now());
+  const [adminStats, setAdminStats] = useState<AdminStat[]>([]);
+  const [adminStatPage, setAdminStatPage] = useState(1);
+  const [adminStatPerPage, setAdminStatPerPage] = useState(10);
+  const [adminStatTotalPages, setAdminStatTotalPages] = useState(1);
+  const [adminStatTotal, setAdminStatTotal] = useState(0);
+  const [adminStatFrom, setAdminStatFrom] = useState<number | null>(null);
+  const [adminStatTo, setAdminStatTo] = useState<number | null>(null);
+  const [adminStatSearchInput, setAdminStatSearchInput] = useState('');
+  const [adminStatSearch, setAdminStatSearch] = useState('');
+  const [viewAdminStats, setViewAdminStats] = useState(false);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [inviteLoading, setInviteLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [formError, setFormError] = useState('');
   const allOrdersRef = useRef(allOrders);
   const fetchDataRef = useRef<() => void>(() => {});
+  const fetchAdminStatsRef = useRef<() => void>(() => {});
   const activeTabRef = useRef(activeTab);
 
   useEffect(() => {
@@ -209,9 +222,27 @@ export default function Admin() {
     setLoading(false);
   };
 
+  const fetchAdminStats = async () => {
+    const params = new URLSearchParams();
+    params.set('page', String(adminStatPage));
+    params.set('per_page', String(adminStatPerPage));
+    if (adminStatSearch) params.set('q', adminStatSearch);
+    try {
+      const res = await api.get<PaginatedAdminStats>(`/admin/admin-stats?${params.toString()}`);
+      setAdminStats(res.data);
+      setAdminStatTotalPages(res.last_page);
+      setAdminStatTotal(res.total);
+      setAdminStatFrom(res.from);
+      setAdminStatTo(res.to);
+    } catch {
+      toast.error('Error al cargar estadísticas de administradores');
+    }
+  };
+
   // Keep refs in sync with latest values
   allOrdersRef.current = allOrders;
   fetchDataRef.current = fetchData;
+  fetchAdminStatsRef.current = fetchAdminStats;
   activeTabRef.current = activeTab;
 
   useEffect(() => {
@@ -235,6 +266,11 @@ export default function Admin() {
     if (activeTab !== 'users') return;
     fetchData();
   }, [userPage, userPerPage, userSearch, userStatusFilter]);
+
+  useEffect(() => {
+    if (!viewAdminStats) return;
+    fetchAdminStats();
+  }, [adminStatPage, adminStatPerPage, adminStatSearch, viewAdminStats]);
 
   useEffect(() => {
     if (activeTab !== 'users') return;
@@ -462,8 +498,89 @@ export default function Admin() {
         <div className="bg-white rounded-2xl shadow-2xl p-6">
           {activeTab === 'users' && (
             <>
-              <h2 className="text-xl font-bold text-gray-800 mb-4">Usuarios</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-800">Usuarios</h2>
+                {user?.role === 'super_admin' && (
+                  <button onClick={() => { setViewAdminStats(!viewAdminStats); if (!viewAdminStats) { setAdminStatPage(1); setAdminStatSearch(''); setAdminStatSearchInput(''); } }} className={`px-4 py-2 rounded-lg text-sm font-semibold transition inline-flex items-center gap-2 ${viewAdminStats ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                    {viewAdminStats ? 'Volver a usuarios' : <><Users size={16} /> Ver admins</>}
+                  </button>
+                )}
+              </div>
 
+              {viewAdminStats ? (
+                <>
+                  <div className="flex flex-wrap items-center gap-3 mb-4">
+                    <form onSubmit={(e) => { e.preventDefault(); setAdminStatPage(1); setAdminStatSearch(adminStatSearchInput); }} className="flex-1 min-w-[200px]">
+                      <input type="text" value={adminStatSearchInput} onChange={(e) => setAdminStatSearchInput(e.target.value)} placeholder="Buscar por nombre, email o rol..." className="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none focus:border-green-500" />
+                    </form>
+                    <select value={adminStatPerPage} onChange={(e) => { setAdminStatPage(1); setAdminStatPerPage(Number(e.target.value)); }} className="px-3 py-2 rounded-lg border border-gray-300 outline-none bg-white">
+                      {[5, 10, 20, 30, 50, 100].map((n) => <option key={n} value={n}>{n} por pág.</option>)}
+                    </select>
+                    <Tooltip text="Ejecutar búsqueda">
+                      <button type="button" onClick={() => { setAdminStatPage(1); setAdminStatSearch(adminStatSearchInput); }} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition inline-flex items-center gap-2"><Search size={16} /> Buscar</button>
+                    </Tooltip>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-200">
+                          <th className="text-left py-3 px-2 font-semibold text-gray-600">Nombre</th>
+                          <th className="text-left py-3 px-2 font-semibold text-gray-600">Email</th>
+                          <th className="text-center py-3 px-2 font-semibold text-gray-600">Rol</th>
+                          <th className="text-center py-3 px-2 font-semibold text-gray-600">Usuarios</th>
+                          <th className="text-center py-3 px-2 font-semibold text-gray-600">Sorteos activos</th>
+                          <th className="text-center py-3 px-2 font-semibold text-gray-600">Sorteos cerrados</th>
+                          <th className="text-right py-3 px-2 font-semibold text-gray-600">Último acceso</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {adminStats.map((a) => (
+                          <tr key={a.id} className="border-b border-gray-100 hover:bg-gray-50">
+                            <td className="py-3 px-2 font-medium text-gray-800">{a.name}</td>
+                            <td className="py-3 px-2 text-gray-500">{a.email}</td>
+                            <td className="py-3 px-2 text-center">
+                              <span className={`text-xs px-2 py-0.5 rounded font-semibold ${a.role === 'super_admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>{a.role === 'super_admin' ? 'super_admin' : 'admin'}</span>
+                            </td>
+                            <td className="py-3 px-2 text-center font-semibold text-gray-800">{a.managed_users_count}</td>
+                            <td className="py-3 px-2 text-center font-semibold text-green-600">{a.active_raffles_count}</td>
+                            <td className="py-3 px-2 text-center font-semibold text-gray-600">{a.closed_raffles_count}</td>
+                            <td className="py-3 px-2 text-right text-gray-500 text-xs">{a.last_login_at ? new Date(a.last_login_at).toLocaleString('es-AR') : 'Nunca'}</td>
+                          </tr>
+                        ))}
+                        {adminStats.length === 0 && (
+                          <tr><td colSpan={7} className="text-center py-8 text-gray-500">No hay administradores.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  {adminStatTotal > 0 && <p className="text-sm text-gray-500 mt-3">{`Mostrando ${adminStatFrom}-${adminStatTo} de ${adminStatTotal} admin(s)`}</p>}
+                  {adminStatTotalPages > 1 && (
+                    <div className="flex items-center justify-center gap-2 mt-4">
+                      <button onClick={() => setAdminStatPage((p) => Math.max(1, p - 1))} disabled={adminStatPage === 1} className="px-3 py-2 rounded-lg border border-gray-300 disabled:opacity-40 hover:bg-gray-100 transition shrink-0">« Anterior</button>
+                      <div className="flex items-center gap-1 overflow-x-auto">
+                        {(() => {
+                          const pages: (number | 'ellipsis')[] = [];
+                          if (adminStatTotalPages <= 7) {
+                            for (let i = 1; i <= adminStatTotalPages; i++) pages.push(i);
+                          } else {
+                            pages.push(1);
+                            if (adminStatPage > 3) pages.push('ellipsis');
+                            for (let i = Math.max(2, adminStatPage - 1); i <= Math.min(adminStatTotalPages - 1, adminStatPage + 1); i++) pages.push(i);
+                            if (adminStatPage < adminStatTotalPages - 2) pages.push('ellipsis');
+                            pages.push(adminStatTotalPages);
+                          }
+                          return pages.map((p, i) =>
+                            p === 'ellipsis' ? <span key={`e${i}`} className="px-1 text-gray-400">...</span> :
+                            <button key={p} onClick={() => setAdminStatPage(p)} className={`px-2.5 py-1.5 rounded-lg border text-sm font-semibold transition ${p === adminStatPage ? 'bg-green-600 text-white border-green-600' : 'border-gray-300 hover:bg-gray-100 text-gray-700'}`}>{p}</button>
+                          );
+                        })()}
+                      </div>
+                      <button onClick={() => setAdminStatPage((p) => Math.min(adminStatTotalPages, p + 1))} disabled={adminStatPage === adminStatTotalPages} className="px-3 py-2 rounded-lg border border-gray-300 disabled:opacity-40 hover:bg-gray-100 transition shrink-0">Siguiente »</button>
+                    </div>
+                  )}
+                </>
+              ) : (
+              <>
               <div className="flex flex-wrap items-center gap-3 mb-4">
                 <form onSubmit={handleUserSearchSubmit} className="flex-1 min-w-[200px]">
                   <input type="text" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} placeholder="Buscar por nombre, email, whatsapp, status o rol..." className="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none focus:border-green-500" />
@@ -568,7 +685,9 @@ export default function Admin() {
                   )}
                 </>
               )}
-            </>
+              </>
+            )}
+          </>
           )}
 
           {activeTab === 'orders' && (
