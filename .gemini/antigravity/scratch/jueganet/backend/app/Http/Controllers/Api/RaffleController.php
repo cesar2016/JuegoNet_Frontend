@@ -114,6 +114,11 @@ class RaffleController extends Controller
             return response()->json(['message' => 'La cantidad de premios no coincide con las descripciones.'], 422);
         }
 
+        $activeCount = Raffle::where('is_active', true)->where('admin_id', $request->user()->id)->count();
+        if ($activeCount >= 5) {
+            return response()->json(['message' => 'No se pueden tener más de 5 sorteos activos en simultáneo.'], 422);
+        }
+
         $maxNumber = (int) $validated['max_number'];
         unset($validated['duration_hours']);
 
@@ -285,9 +290,9 @@ class RaffleController extends Controller
         $activating = ! $raffle->is_active;
 
         if ($activating && ! $raffle->drawn_at) {
-            $activeCount = Raffle::where('is_active', true)->where('id', '!=', $raffle->id)->count();
+            $activeCount = Raffle::where('is_active', true)->where('admin_id', $request->user()->id)->where('id', '!=', $raffle->id)->count();
             if ($activeCount >= 5) {
-                return response()->json(['message' => 'No se pueden activar más de 5 sorteos en simultáneo.'], 422);
+                return response()->json(['message' => 'No se pueden tener más de 5 sorteos activos en simultáneo.'], 422);
             }
         }
 
