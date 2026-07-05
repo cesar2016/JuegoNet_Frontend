@@ -216,19 +216,26 @@ class AuthController extends Controller
 
     public function testMail(Request $request): JsonResponse
     {
+        $to = $request->input('email', $request->user()->email);
         $user = $request->user();
 
         try {
             $frontendUrl = env('FRONTEND_URL', 'http://127.0.0.1:3333');
             $url = rtrim($frontendUrl, '/').'/verify-email/test';
-            Mail::to($user->email)->send(new VerificationEmail($user, $url));
+            Mail::to($to)->send(new VerificationEmail($user, $url));
 
-            return response()->json(['message' => 'Email de prueba enviado a '.$user->email]);
+            return response()->json(['message' => 'Email enviado a '.$to]);
         } catch (\Throwable $e) {
-            return response()->json([
-                'message' => 'Error al enviar email: '.$e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ], 500);
+            $details = [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ];
+            if (method_exists($e, 'getDebug')) {
+                $details['debug'] = $e->getDebug();
+            }
+
+            return response()->json(['error' => $details], 500);
         }
     }
 
