@@ -98,8 +98,8 @@ class AuthController extends Controller
             ], 403);
         }
 
-        // Auto-verify users who registered before email verification was required
-        if (! $user->email_verified_at && $user->status !== 'blocked') {
+        // Auto-verify any user without email_verified_at (covers old and edge-case users)
+        if (! $user->email_verified_at) {
             $user->update(['email_verified_at' => now()]);
         }
 
