@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -60,11 +61,14 @@ class AuthController extends Controller
         $frontendUrl = env('FRONTEND_URL', 'http://127.0.0.1:3333');
         $verificationUrl = rtrim($frontendUrl, '/').'/verify-email/'.$verificationToken;
 
-        try {
-            Mail::to($user->email)->send(new VerificationEmail($user, $verificationUrl));
-        } catch (\Exception $e) {
-            // If mail fails, user can still resend verification
-        }
+        // Send email after response to avoid blocking registration
+        app()->terminating(function () use ($user, $verificationUrl) {
+            try {
+                Mail::to($user->email)->send(new VerificationEmail($user, $verificationUrl));
+            } catch (\Throwable $e) {
+                Log::error('Verification email failed', ['error' => $e->getMessage()]);
+            }
+        });
 
         if ($adminId) {
             $this->broadcastToAdminAndSuperAdmins($adminId, 'admin_users_updated');
