@@ -1,0 +1,127 @@
+
+
+			###################################################################### REMOTO ##
+			
+			Front_Stagin = https://frontend-repo-one-psi.vercel.app/	
+			API_Stagin = https://backend-api-production-1316.up.railway.app/
+			
+			PHP_MyADMIN = https://phpmyadmin-production-dc24.up.railway.app/
+			User = root
+			pass = JuegaNet2024!
+			
+			####################################################################### LOCAL ##
+			
+			cd ~/.gemini/antigravity/scratch/jueganet
+			php artisan db:seed
+			php artisan migrate:fresh --seed --force
+			
+			# Reiniciar DB 
+			php artisan db:reset --force
+			
+			# Cerrar puertos
+			sudo fuser -k 3333/tcp 8383/tcp 8080/tcp
+			
+			# Comprobar puertos
+			sudo lsof -i :3333
+			
+			php artisan serve --port=8383 & php artisan queue:listen --tries=1 --timeout=0 & php artisan reverb:start
+			
+			 
+			
+			
+
+-- ------------------------------------------------------------------ GMAIL
+
+Datos de Acceso
+
+juegonet.ok@gmail.com
+juegonet.ok010
+
+Contraseña de aplicciones:
+vdqg quov sesg jcf
+			
+
+-- ------------------------------------------------------------------ LOCAL y Remoto
+
+Usuarios:
+sadmin@jueganet.online
+ 
+pass: admin123
+
+*********************************************************************** GITHUb ****
+BackEnd
+git@github.com:cesar2016/JuegoNet_Backend.git
+
+FrontEnd
+git@github.com:cesar2016/JuegoNet_Frontend.git
+
+
+Token-Vercel
+vcp_1LwE3XUfSZBriBf3WTWV8vQeepol71cPPkV9zSL7ky3MVTlVGj00LEXw
+
+Token-railway
+6c7f0880-ba0b-41bb-b8bd-2fe91ba6fb2b
+
+			*********************************************
+
+Te cuento rápido: soy dev y creé una app web para que los dueños de rifas lleven el control de todo y saquen mucha más rentabilidad de cada número.
+
+Está en modo Beta y busco administradores que quieran testearla en sus sorteos. Es Free! sin costo, Si querés chusmear cómo se ve desde el lado del apostador, registrate acá:
+
+🚀 https://frontend-repo-one-psi.vercel.app/
+
+¡Avisame si te interesa y te muestro el panel de control!
+
+			*************************************************************
+
+Creame Seeder: 2 admin pertenecientes al super_admin con los nombres: name: Admin A, email: admin_a@jueganet.com, password: admin123 | name: Admin B, email: admin_b@jueganet.com, password: admin123. le crearas 5 usuarios a cada uno con nombres comunes de personas hombre y mujer con su respectivos correos, las clavez seran siempre admin123. Tambien decime si habra alguna forma/comando de ejecutar estos seeders
+
+	*******************************************
+
+Soy un desarrollador que cree que el software debe ahorrar tiempo, no solo ejecutar tareas. Con más de 4 años en el stack PHP/Node, hoy me especializo en automatizar lo que antes era manual. Uso n8n e IA para conectar sistemas y crear flujos que impactan directamente en el ahorro de costos de la empresa."
+
+Cuando tendrias unos minutos para una call ?, me gustaria contarte como puedo emplear mis habilidades en el equipo
+
+
+🚀 BUSCO 5 dueños o encargados de rifas que quieran probar Free esta aplicacion, para poder recaudar mas rapido y ordenado. Que les ofrecemos:
+
+* Tablero de numeros automatico para todos sus usuarios registrados
+* Creacion de hasta 5 sorteos simultaneso
+* Control tanto de usuarios como de apuestas
+* Info de ganadores al instante
+* Configuracion del sorteo con tiempo de inicio y fin de las apuestas
+* Solo participan quienes invite y acepte el ADMIN 
+
+Te paso el link para registrarte y probar la plataforma? 
+
+Para mas info al Whatsapp: https://wa.me/543408681132
+
+App: https://frontend-repo-one-psi.vercel.app/
+
+
+
+
+****************** ( 1 )
+
+🚀 ¡Llegó la forma más fácil de hacer tus sorteos! Conocé JuegaNet 🚀
+Cómo funciona? Es facilísimo: 👇
+1️⃣ Invitás a tus clientes a la plataforma que vos mismo administrás.
+2️⃣ Armás el sorteo a tu gusto.
+3️⃣ Ingresás los números ganadores ¡y LISTO!
+
+💥 El sistema hace la magia y te dicta al instante quiénes fueron los ganadores. ¡Sin vueltas!
+
+¿Querés probarla gratis? 😎 Te paso el link por acá
+
+
+****************** ( 2 )
+
+Dale, Ahi te paso link para que te registres - "ESTE NO LO COMPARTAS" , avisame luego asi te acepto, 
+Dentro de tu panel en la seccion de Usuarios esta el link que vos le debes compartir a tus clientes, ellos se registran desde ahi y vos los debes aceptar.
+Las dudas que tengas, no dides en consultarme ;)
+
+Link de Registro para admin
+https://frontend-repo-one-psi.vercel.app/register?invite_token=s9Bxz4zqrICdcYTBHzrzKzwf8BYH7j4GY4lDAm545cNb2RZPObsY1fhXFYSgFOxI
+
+
+

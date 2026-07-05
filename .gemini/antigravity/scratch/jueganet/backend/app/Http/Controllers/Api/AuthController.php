@@ -98,8 +98,8 @@ class AuthController extends Controller
             ], 403);
         }
 
-        // Existing users approved before email verification was required
-        if (! $user->email_verified_at && $user->status === 'approved') {
+        // Auto-verify users who registered before email verification was required
+        if (! $user->email_verified_at && $user->status !== 'blocked') {
             $user->update(['email_verified_at' => now()]);
         }
 
