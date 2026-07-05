@@ -56,7 +56,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (name: string, email: string, password: string, passwordConfirmation: string, inviteToken?: string) => {
       const body: Record<string, string> = { name, email, password, password_confirmation: passwordConfirmation };
       if (inviteToken) body.invite_token = inviteToken;
-      await api.post('/register', body);
+      const data = await api.post<{ user: User; token: string; message: string }>('/register', body);
+      localStorage.setItem('token', data.token);
+      setToken(data.token);
+      setUser(data.user);
     },
     [],
   );
