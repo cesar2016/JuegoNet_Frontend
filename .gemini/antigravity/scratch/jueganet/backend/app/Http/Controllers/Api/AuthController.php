@@ -98,6 +98,11 @@ class AuthController extends Controller
             ], 403);
         }
 
+        // Existing users approved before email verification was required
+        if (! $user->email_verified_at && $user->status === 'approved') {
+            $user->update(['email_verified_at' => now()]);
+        }
+
         if (! $user->email_verified_at) {
             return response()->json([
                 'message' => 'Debés verificar tu email antes de iniciar sesión. Revisá tu bandeja de entrada.',
