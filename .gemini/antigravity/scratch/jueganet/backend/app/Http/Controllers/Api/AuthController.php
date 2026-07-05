@@ -45,26 +45,33 @@ class AuthController extends Controller
         }
 
         $isFromSuper = isset($isSuper) && $isSuper;
+        $verificationToken = Str::random(64);
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'status' => 'approved',
-            'email_verified_at' => now(),
+            'status' => 'pending_verification',
             'role' => $isFromSuper ? 'admin' : 'user',
             'admin_id' => $adminId,
+            'verification_token' => $verificationToken,
         ]);
 
-        $token = $user->createToken('auth-token')->plainTextToken;
+        $frontendUrl = env('FRONTEND_URL', 'http://127.0.0.1:3333');
+        $verificationUrl = rtrim($frontendUrl, '/').'/verify-email/'.$verificationToken;
+
+        try {
+            Mail::to($user->email)->send(new VerificationEmail($user, $verificationUrl));
+        } catch (\Throwable $e) {
+            // Log error, user can resend later
+        }
 
         if ($adminId) {
             $this->broadcastToAdminAndSuperAdmins($adminId, 'admin_users_updated');
         }
 
         return response()->json([
-            'message' => 'Registro exitoso.',
-            'token' => $token,
+            'message' => 'Registro exitoso. Revisá tu email para verificar tu cuenta.',
             'user' => $user,
         ], 201);
     }
@@ -89,11 +96,6 @@ class AuthController extends Controller
                 'message' => 'Tu cuenta ha sido bloqueada. Contactá al administrador.',
                 'status' => 'blocked',
             ], 403);
-        }
-
-        // Auto-verify old users who registered before email verification was required
-        if (! $user->email_verified_at && $user->status === 'approved') {
-            $user->update(['email_verified_at' => now()]);
         }
 
         if (! $user->email_verified_at) {
