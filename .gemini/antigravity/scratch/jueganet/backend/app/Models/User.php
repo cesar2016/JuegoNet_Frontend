@@ -23,11 +23,13 @@ class User extends Authenticatable
         'whatsapp',
         'admin_id',
         'last_login_at',
+        'verification_token',
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
+        'verification_token',
     ];
 
     protected function casts(): array

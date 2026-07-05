@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::get('/verify-email/{token}', [AuthController::class, 'verifyEmail']);
+Route::post('/resend-verification', [AuthController::class, 'resendVerification']);
 
 Route::middleware(['auth:sanctum', 'check.status'])->group(function () {
     Route::get('/site-admin', [AuthController::class, 'siteAdmin']);
@@ -36,10 +38,7 @@ Route::middleware(['auth:sanctum', 'check.status'])->group(function () {
         Route::put('/raffles/{raffle}', [RaffleController::class, 'update']);
         Route::delete('/raffles/{raffle}', [RaffleController::class, 'destroy']);
 
-        Route::get('/admin/pending-users', [AdminController::class, 'pendingUsers']);
         Route::get('/admin/pending-orders', [AdminController::class, 'pendingOrders']);
-        Route::post('/admin/users/{user}/approve', [AdminController::class, 'approveUser']);
-        Route::post('/admin/users/{user}/reject', [AdminController::class, 'rejectUser']);
 
         Route::post('/admin/orders/{order}/approve', [AdminController::class, 'approveOrder']);
         Route::post('/admin/orders/{order}/reject', [AdminController::class, 'rejectOrder']);

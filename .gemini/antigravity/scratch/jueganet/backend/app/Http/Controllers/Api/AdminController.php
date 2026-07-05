@@ -35,50 +35,6 @@ class AdminController extends Controller
         return $query;
     }
 
-    public function pendingUsers(Request $request): JsonResponse
-    {
-        $query = User::where('status', 'pending_approval')->orderBy('created_at', 'desc');
-        $this->applyUserScope($query, $request->user());
-
-        return response()->json($query->get());
-    }
-
-    public function approveUser(Request $request, User $user): JsonResponse
-    {
-        $authUser = $request->user();
-        if (! $authUser->isSuperAdmin() && $user->admin_id !== $authUser->id) {
-            return response()->json(['message' => 'No tienes permisos para aprobar este usuario.'], 403);
-        }
-
-        if ($user->status !== 'pending_approval' && $user->status !== 'rejected') {
-            return response()->json(['message' => 'El usuario no está pendiente de aprobación.'], 400);
-        }
-
-        $user->update(['status' => 'approved']);
-
-        if ($user->admin_id) {
-            $this->broadcastToAdminAndSuperAdmins($user->admin_id, 'pending_users_updated');
-        }
-
-        return response()->json(['message' => 'Usuario aprobado.', 'user' => $user]);
-    }
-
-    public function rejectUser(Request $request, User $user): JsonResponse
-    {
-        $authUser = $request->user();
-        if (! $authUser->isSuperAdmin() && $user->admin_id !== $authUser->id) {
-            return response()->json(['message' => 'No tienes permisos para rechazar este usuario.'], 403);
-        }
-
-        if ($user->status !== 'pending_approval') {
-            return response()->json(['message' => 'El usuario no está pendiente de aprobación.'], 400);
-        }
-
-        $user->update(['status' => 'rejected']);
-
-        return response()->json(['message' => 'Usuario rechazado.', 'user' => $user]);
-    }
-
     public function pendingOrders(Request $request): JsonResponse
     {
         $this->releaseExpiredPendingOrders();
@@ -358,7 +314,7 @@ class AdminController extends Controller
             'email' => 'sometimes|string|email|max:255|unique:users,email,'.$user->id,
             'whatsapp' => 'nullable|string|max:20',
             'avatar' => 'nullable|string|max:255',
-            'status' => 'sometimes|in:pending_approval,approved,rejected,blocked',
+            'status' => 'sometimes|in:pending_verification,approved,blocked',
             'role' => 'sometimes|in:user,super_admin',
         ]);
 

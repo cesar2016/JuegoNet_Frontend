@@ -1,13 +1,17 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
-import { LockOpen } from 'lucide-react';
+import api from '../lib/api';
+import { LockOpen, Mail } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showResend, setShowResend] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSent, setResendSent] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -15,19 +19,33 @@ export default function Login() {
     e.preventDefault();
     setError('');
     setLoading(true);
+    setShowResend(false);
+    setResendSent(false);
     try {
       await login(email, password);
       navigate('/dashboard');
     } catch (err: unknown) {
       const apiErr = err as { data?: { message?: string; status?: string } };
-      if (apiErr.data?.status === 'pending_approval') {
-        setError('Tu cuenta está pendiente de aprobación.');
+      if (apiErr.data?.status === 'pending_verification') {
+        setError('Debés verificar tu email antes de iniciar sesión. Revisá tu bandeja de entrada.');
+        setShowResend(true);
       } else {
         setError(apiErr.data?.message || 'Error al iniciar sesión');
       }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleResend = async () => {
+    setResendLoading(true);
+    try {
+      await api.post('/resend-verification', { email });
+      setResendSent(true);
+    } catch {
+      setError('Error al reenviar el email. Intentá de nuevo.');
+    }
+    setResendLoading(false);
   };
 
   return (
@@ -38,6 +56,7 @@ export default function Login() {
           <p className="text-gray-500 mt-2">Inicia sesión para continuar</p>
         </div>
         {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4">{error}</div>}
+        {resendSent && <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg mb-4">Email de verificación reenviado. Revisá tu bandeja de entrada.</div>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">Email</label>
@@ -53,6 +72,12 @@ export default function Login() {
             className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition disabled:opacity-50">
             {loading ? 'Iniciando sesión...' : <span className="inline-flex items-center gap-2"><LockOpen size={18} /> Ingresar</span>}
           </button>
+          {showResend && !resendSent && (
+            <button type="button" onClick={handleResend} disabled={resendLoading}
+              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 rounded-lg transition inline-flex items-center justify-center gap-2 disabled:opacity-50">
+              {resendLoading ? 'Reenviando...' : <><Mail size={16} /> Reenviar email de verificación</>}
+            </button>
+          )}
         </form>
       </div>
     </div>

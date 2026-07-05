@@ -39,7 +39,8 @@ export default function Register() {
       <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-green-700 via-green-600 to-emerald-700">
         <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md text-center">
           <h2 className="text-2xl font-bold text-green-600 mb-4 inline-flex items-center gap-2"><CheckCircle className="text-green-500" size={24} /> ¡Registro exitoso!</h2>
-          <p className="text-gray-600 mb-6">Tu cuenta está pendiente de aprobación.</p>
+          <p className="text-gray-600 mb-2">Te enviamos un email de verificación a <strong>{email}</strong>.</p>
+          <p className="text-gray-500 text-sm mb-6">Revisá tu bandeja de entrada y hacé clic en el enlace para activar tu cuenta.</p>
           <button onClick={() => navigate('/')} className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition"><Home size={18} /> Volver al inicio</button>
         </div>
       </div>

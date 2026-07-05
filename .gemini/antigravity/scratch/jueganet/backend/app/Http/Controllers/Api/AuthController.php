@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Api;
 
 use App\Events\AdminNotification;
 use App\Http\Controllers\Controller;
+use App\Mail\VerificationEmail;
 use App\Models\AdminInvite;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -42,26 +45,33 @@ class AuthController extends Controller
         }
 
         $isFromSuper = isset($isSuper) && $isSuper;
+        $verificationToken = Str::random(64);
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'status' => 'pending_approval',
+            'status' => 'pending_verification',
             'role' => $isFromSuper ? 'admin' : 'user',
             'admin_id' => $adminId,
+            'verification_token' => $verificationToken,
         ]);
 
-        if ($adminId) {
-            $this->broadcastToAdminAndSuperAdmins($adminId, $isFromSuper ? 'admin_users_updated' : 'pending_users_updated');
+        $frontendUrl = env('FRONTEND_URL', 'http://127.0.0.1:3333');
+        $verificationUrl = rtrim($frontendUrl, '/').'/verify-email/'.$verificationToken;
+
+        try {
+            Mail::to($user->email)->send(new VerificationEmail($user, $verificationUrl));
+        } catch (\Exception $e) {
+            // If mail fails, user can still resend verification
         }
 
-        $message = $isFromSuper
-            ? 'Registro exitoso como administrador. Espera la aprobación.'
-            : 'Registro exitoso. Espera la aprobación del administrador.';
+        if ($adminId) {
+            $this->broadcastToAdminAndSuperAdmins($adminId, 'admin_users_updated');
+        }
 
         return response()->json([
-            'message' => $message,
+            'message' => 'Registro exitoso. Revisá tu email para verificar tu cuenta.',
             'user' => $user,
         ], 201);
     }
@@ -81,15 +91,22 @@ class AuthController extends Controller
             ]);
         }
 
-        if ($user->status !== 'approved') {
-            $msg = $user->status === 'blocked'
-                ? 'Tu cuenta ha sido bloqueada. Contactá al administrador.'
-                : 'Tu cuenta está pendiente de aprobación.';
-
+        if ($user->status === 'blocked') {
             return response()->json([
-                'message' => $msg,
-                'status' => $user->status,
+                'message' => 'Tu cuenta ha sido bloqueada. Contactá al administrador.',
+                'status' => 'blocked',
             ], 403);
+        }
+
+        if (! $user->email_verified_at) {
+            return response()->json([
+                'message' => 'Debés verificar tu email antes de iniciar sesión. Revisá tu bandeja de entrada.',
+                'status' => 'pending_verification',
+            ], 403);
+        }
+
+        if ($user->status !== 'approved') {
+            $user->update(['status' => 'approved']);
         }
 
         $user->update(['last_login_at' => now()]);
@@ -101,6 +118,56 @@ class AuthController extends Controller
             'user' => $user->fresh(),
             'token' => $token,
         ]);
+    }
+
+    public function verifyEmail(string $token): JsonResponse
+    {
+        $user = User::where('verification_token', $token)->first();
+
+        if (! $user) {
+            return response()->json(['message' => 'El enlace de verificación no es válido o ya fue usado.'], 400);
+        }
+
+        $user->update([
+            'email_verified_at' => now(),
+            'status' => 'approved',
+            'verification_token' => null,
+        ]);
+
+        return response()->json([
+            'message' => 'Email verificado exitosamente. Ya podés iniciar sesión.',
+        ]);
+    }
+
+    public function resendVerification(Request $request): JsonResponse
+    {
+        $validated = $request->validate(['email' => 'required|string|email']);
+
+        $user = User::where('email', $validated['email'])->first();
+
+        if (! $user) {
+            return response()->json(['message' => 'No hay una cuenta con ese email.'], 404);
+        }
+
+        if ($user->email_verified_at) {
+            return response()->json(['message' => 'Tu email ya está verificado. Iniciá sesión.'], 400);
+        }
+
+        $token = $user->verification_token ?? Str::random(64);
+        if (! $user->verification_token) {
+            $user->update(['verification_token' => $token]);
+        }
+
+        $frontendUrl = env('FRONTEND_URL', 'http://127.0.0.1:3333');
+        $verificationUrl = rtrim($frontendUrl, '/').'/verify-email/'.$token;
+
+        try {
+            Mail::to($user->email)->send(new VerificationEmail($user, $verificationUrl));
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al enviar el email. Intentá de nuevo.'], 500);
+        }
+
+        return response()->json(['message' => 'Email de verificación reenviado. Revisá tu bandeja de entrada.']);
     }
 
     public function logout(Request $request): JsonResponse

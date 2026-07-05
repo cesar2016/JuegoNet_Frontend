@@ -67,7 +67,8 @@ class AdminSeeder extends Seeder
                     'name' => $u['name'],
                     'password' => Hash::make('admin123'),
                     'role' => 'user',
-                    'status' => 'pending_approval',
+                    'status' => 'approved',
+                    'email_verified_at' => now(),
                     'admin_id' => $adminA->id,
                 ]
             );
@@ -80,7 +81,8 @@ class AdminSeeder extends Seeder
                     'name' => $u['name'],
                     'password' => Hash::make('admin123'),
                     'role' => 'user',
-                    'status' => 'pending_approval',
+                    'status' => 'approved',
+                    'email_verified_at' => now(),
                     'admin_id' => $adminB->id,
                 ]
             );
