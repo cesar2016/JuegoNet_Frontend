@@ -6,6 +6,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
 import Profile from './pages/Profile';
+import VerifyEmail from './pages/VerifyEmail';
 
 function App() {
   const { user, loading } = useAuth();
@@ -27,6 +28,7 @@ function App() {
       <Routes>
         <Route path="/" element={user ? <Navigate to={user.role === 'super_admin' || user.role === 'admin' ? '/admin' : '/dashboard'} /> : <Login />} />
         <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register />} />
+        <Route path="/verify-email/:token" element={<VerifyEmail />} />
         <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/" />} />
         <Route path="/admin" element={user && (user.role === 'super_admin' || user.role === 'admin') ? <Admin /> : <Navigate to="/" />} />
         <Route path="/profile" element={user ? <Profile /> : <Navigate to="/" />} />

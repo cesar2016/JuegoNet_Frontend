@@ -60,7 +60,6 @@ export default function Admin() {
   const [deleteRaffleId, setDeleteRaffleId] = useState<number | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [orderBadgeCount, setOrderBadgeCount] = useState(0);
-  const [userBadgeCount, setUserBadgeCount] = useState(0);
   const [now, setNow] = useState(Date.now());
   const [adminStats, setAdminStats] = useState<AdminStat[]>([]);
   const [adminStatPage, setAdminStatPage] = useState(1);
@@ -89,13 +88,11 @@ export default function Admin() {
 
   const refreshBadges = useCallback(async () => {
     try {
-      const [pendingRes, cartRes, pendingUsersRes] = await Promise.all([
+      const [pendingRes, cartRes] = await Promise.all([
         api.get<PaginatedOrders>('/admin/orders?status=pending_admin&per_page=1'),
         api.get<PaginatedOrders>('/admin/orders?status=in_cart&per_page=1'),
-        api.get<PaginatedUsers>('/admin/users?status=pending_approval&per_page=1'),
       ]);
       setOrderBadgeCount(pendingRes.total + cartRes.total);
-      setUserBadgeCount(pendingUsersRes.total);
     } catch {}
   }, []);
 
@@ -113,14 +110,14 @@ export default function Admin() {
       if (e.type === 'new_pending_order' && e.data?.status === 'pending_admin') {
         if (activeTabRef.current === 'orders') fetchDataRef.current();
       }
-      if (e.type === 'pending_users_updated' && activeTabRef.current === 'users') {
+      if (e.type === 'admin_users_updated' && activeTabRef.current === 'users') {
         fetchDataRef.current();
       }
       if (e.type === 'raffle_list_updated') {
         if (activeTabRef.current === 'raffles') fetchDataRef.current();
         if (viewAdminStatsRef.current) fetchAdminStatsRef.current();
       }
-      if ((e.type === 'pending_users_updated' || e.type === 'admin_users_updated') && viewAdminStatsRef.current) {
+      if (e.type === 'admin_users_updated' && viewAdminStatsRef.current) {
         fetchAdminStatsRef.current();
       }
     };
@@ -359,28 +356,6 @@ export default function Admin() {
     setLoading(false);
   };
 
-  const handleApproveUser = async (userId: number) => {
-    try {
-      await api.post(`/admin/users/${userId}/approve`);
-      setAllUsers((prev) => prev.map((u) => u.id === userId ? { ...u, status: 'approved' } : u));
-      refreshBadges();
-      toast.success('Usuario aprobado correctamente.');
-    } catch {
-      toast.error('Error al aprobar usuario');
-    }
-  };
-
-  const handleRejectUser = async (userId: number) => {
-    try {
-      await api.post(`/admin/users/${userId}/reject`);
-      setAllUsers((prev) => prev.map((u) => u.id === userId ? { ...u, status: 'rejected' } : u));
-      refreshBadges();
-      toast.success('Usuario rechazado.');
-    } catch {
-      toast.error('Error al rechazar usuario');
-    }
-  };
-
   const handleToggleBlock = async (userId: number, currentlyBlocked: boolean) => {
     try {
       if (currentlyBlocked) {
@@ -496,7 +471,7 @@ export default function Admin() {
           {(['users', 'orders', 'raffles'] as const).map((tab) => (
             <button key={tab} onClick={() => handleTabChange(tab)}
               className={`flex-1 sm:flex-none px-2 sm:px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm transition truncate ${activeTab === tab ? 'bg-white text-green-700 shadow-lg' : 'bg-white/20 text-white hover:bg-white/30'}`}>
-              {tab === 'users' ? <span className="inline-flex items-center gap-2 relative"><Users size={18} /> Usuarios{userBadgeCount > 0 && <span className="absolute -top-2 -right-3 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">{userBadgeCount}</span>}</span> : tab === 'orders' ? <span className="inline-flex items-center gap-2 relative"><FileText size={18} /> Órdenes{orderBadgeCount > 0 && <span className="absolute -top-2 -right-3 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">{orderBadgeCount}</span>}</span> : <span className="inline-flex items-center gap-2"><Dice5 size={18} /> Sorteos</span>}
+              {tab === 'users' ? <span className="inline-flex items-center gap-2"><Users size={18} /> Usuarios</span> : tab === 'orders' ? <span className="inline-flex items-center gap-2 relative"><FileText size={18} /> Órdenes{orderBadgeCount > 0 && <span className="absolute -top-2 -right-3 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">{orderBadgeCount}</span>}</span> : <span className="inline-flex items-center gap-2"><Dice5 size={18} /> Sorteos</span>}
             </button>
           ))}
         </div>
@@ -593,10 +568,9 @@ export default function Admin() {
                 </form>
                 <select value={userStatusFilter} onChange={(e) => handleUserStatusFilterChange(e.target.value)} className="px-3 py-2 rounded-lg border border-gray-300 outline-none bg-white">
                   <option value="all">Todos los estados</option>
-                  <option value="pending_approval">Pendientes</option>
+                  <option value="pending_verification">Sin verificar</option>
                   <option value="approved">Aprobados</option>
                   <option value="blocked">Bloqueados</option>
-                  <option value="rejected">Rechazados</option>
                 </select>
                 <select value={userPerPage} onChange={(e) => handleUserPerPageChange(Number(e.target.value))} className="px-3 py-2 rounded-lg border border-gray-300 outline-none bg-white">
                   {[5, 10, 20, 30, 50, 100].map((n) => <option key={n} value={n}>{n} por pág.</option>)}
@@ -626,7 +600,7 @@ export default function Admin() {
                   ) : (
                     <div className="space-y-3">
                       {allUsers.map((u) => {
-                        const cardBg = u.status === 'pending_approval' ? 'bg-yellow-50 border border-yellow-200' : u.status === 'blocked' ? 'bg-red-50 border border-red-200' : u.status === 'rejected' ? 'bg-gray-100 border border-gray-300' : 'bg-gray-50';
+                        const cardBg = u.status === 'pending_verification' ? 'bg-yellow-50 border border-yellow-200' : u.status === 'blocked' ? 'bg-red-50 border border-red-200' : 'bg-gray-50';
                         return (
                           <div key={u.id} className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg p-4 ${cardBg}`}>
                             <div>
@@ -636,25 +610,24 @@ export default function Admin() {
                                 {u.role === 'admin' && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded ml-1">admin</span>}
                                 {u.role === 'user' && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded ml-1">usuario</span>}
                                 {u.status === 'blocked' && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded ml-1">bloqueado</span>}
-                                {u.status === 'pending_approval' && <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded ml-1">pendiente</span>}
-                                {u.status === 'rejected' && <span className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded ml-1">rechazado</span>}
+                                {u.status === 'pending_verification' && <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded ml-1">sin verificar</span>}
                               </p>
                               <p className="text-sm text-gray-500">{u.email}{u.whatsapp ? ` · ${u.whatsapp}` : ''}</p>
                               <p className="text-xs text-gray-400">Registrado: {new Date(u.created_at).toLocaleDateString('es-AR')}{u.role === 'user' && u.admin ? ` · Admin: ${u.admin.name}` : ''}</p>
                             </div>
                             <div className="flex items-center gap-3 shrink-0">
-                              {u.status === 'pending_approval' ? (
-                                <div className="flex gap-2">
-                                  <Tooltip text="Aprobar usuario y permitirle acceder al sistema"><button onClick={() => handleApproveUser(u.id)} className="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-semibold transition inline-flex items-center gap-1"><Check size={16} /> Aprobar</button></Tooltip>
-                                  <Tooltip text="Rechazar solicitud de registro"><button onClick={() => handleRejectUser(u.id)} className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-semibold transition inline-flex items-center gap-1"><X size={16} /> Rechazar</button></Tooltip>
-                                </div>
-                              ) : u.status === 'rejected' ? (
-                                <Tooltip text="Reaprobar usuario rechazado"><button onClick={() => handleApproveUser(u.id)} className="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-semibold transition inline-flex items-center gap-1"><Check size={16} /> Reaprobar</button></Tooltip>
+                              {u.status === 'blocked' ? (
+                                <>
+                                  <span className="text-sm font-semibold text-red-600">Bloqueado</span>
+                                  <Tooltip text="Desbloquear usuario">
+                                    <button onClick={() => handleToggleBlock(u.id, true)} className="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-semibold transition">Desbloquear</button>
+                                  </Tooltip>
+                                </>
                               ) : (
                                 <>
-                                  <span className={`text-sm font-semibold ${u.status === 'approved' ? 'text-green-700' : 'text-red-600'}`}>{u.status === 'approved' ? 'Activo' : 'Bloqueado'}</span>
-                                  <Tooltip text={u.status === 'blocked' ? 'Desbloquear usuario' : 'Bloquear usuario, no podrá acceder al sistema'}>
-                                    <div className="pt-1"><Switch checked={u.status === 'approved'} onChange={() => handleToggleBlock(u.id, u.status === 'blocked')} /></div>
+                                  <span className="text-sm font-semibold text-green-700">{u.status === 'approved' ? 'Activo' : u.status === 'pending_verification' ? 'Sin verificar' : 'Activo'}</span>
+                                  <Tooltip text="Bloquear usuario, no podrá acceder al sistema">
+                                    <div className="pt-1"><Switch checked={true} onChange={() => handleToggleBlock(u.id, false)} /></div>
                                   </Tooltip>
                                 </>
                               )}
