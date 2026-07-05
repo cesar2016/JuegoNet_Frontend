@@ -45,20 +45,16 @@ class AuthController extends Controller
         }
 
         $isFromSuper = isset($isSuper) && $isSuper;
-        $verificationToken = Str::random(64);
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'status' => 'pending_verification',
+            'status' => 'approved',
+            'email_verified_at' => now(),
             'role' => $isFromSuper ? 'admin' : 'user',
             'admin_id' => $adminId,
-            'verification_token' => $verificationToken,
         ]);
-
-        $frontendUrl = env('FRONTEND_URL', 'http://127.0.0.1:3333');
-        $verificationUrl = rtrim($frontendUrl, '/').'/verify-email/'.$verificationToken;
 
         $token = $user->createToken('auth-token')->plainTextToken;
 
