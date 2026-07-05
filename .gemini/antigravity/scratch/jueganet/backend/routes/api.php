@@ -19,6 +19,8 @@ Route::middleware(['auth:sanctum', 'check.status'])->group(function () {
     Route::post('/profile/update', [AuthController::class, 'updateProfile']);
     Route::post('/upload-avatar', [AdminController::class, 'uploadAvatar']);
 
+    Route::post('/test-mail', [AuthController::class, 'testMail']);
+
     Route::get('/cart', [OrderController::class, 'cart']);
     Route::post('/cart/add', [OrderController::class, 'addTicket']);
     Route::delete('/cart/remove/{ticket}', [OrderController::class, 'removeTicket']);
