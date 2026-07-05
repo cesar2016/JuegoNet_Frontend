@@ -61,7 +61,10 @@ class AuthController extends Controller
         $frontendUrl = env('FRONTEND_URL', 'http://127.0.0.1:3333');
         $verificationUrl = rtrim($frontendUrl, '/').'/verify-email/'.$verificationToken;
 
-        // Send email after response to avoid blocking registration
+        // Return token immediately so user is logged in after registration
+        $token = $user->createToken('auth-token')->plainTextToken;
+
+        // Send email after response (best-effort)
         app()->terminating(function () use ($user, $verificationUrl) {
             try {
                 Mail::to($user->email)->send(new VerificationEmail($user, $verificationUrl));
@@ -76,6 +79,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Registro exitoso. Revisá tu email para verificar tu cuenta.',
+            'token' => $token,
             'user' => $user,
         ], 201);
     }

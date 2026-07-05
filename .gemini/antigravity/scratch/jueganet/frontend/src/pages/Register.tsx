@@ -24,7 +24,7 @@ export default function Register() {
     setLoading(true);
     try {
       await register(name, email, password, passwordConfirmation, inviteToken);
-      setSuccess(true);
+      navigate('/dashboard');
     } catch (err: unknown) {
       const apiErr = err as { data?: { message?: string; errors?: Record<string, string[]> } };
       if (apiErr.data?.errors) setError(Object.values(apiErr.data.errors).flat().join('. '));
