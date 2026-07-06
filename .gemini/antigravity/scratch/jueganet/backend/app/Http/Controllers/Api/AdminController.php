@@ -292,6 +292,13 @@ class AdminController extends Controller
             $query->where('status', $status);
         }
 
+        $verified = $request->input('verified');
+        if ($verified === 'false') {
+            $query->whereNull('email_verified_at');
+        } elseif ($verified === 'true') {
+            $query->whereNotNull('email_verified_at');
+        }
+
         $perPage = (int) $request->input('per_page', 10);
         if (! in_array($perPage, [5, 10, 20, 30, 50, 100], true)) {
             $perPage = 10;
