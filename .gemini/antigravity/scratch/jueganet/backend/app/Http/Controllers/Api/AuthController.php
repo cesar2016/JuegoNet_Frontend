@@ -57,10 +57,16 @@ class AuthController extends Controller
             'verification_token' => $verificationToken,
         ]);
 
-        $phpBinary = PHP_BINARY;
-        $artisan = base_path('artisan');
-        $logFile = storage_path('logs/verification-emails.log');
-        exec("{$phpBinary} {$artisan} mail:send-verification {$user->id} {$verificationToken} >> {$logFile} 2>&1 &");
+        try {
+            $frontendUrl = env('FRONTEND_URL', 'http://127.0.0.1:3333');
+            $url = rtrim($frontendUrl, '/').'/verify-email/'.$verificationToken;
+            Mail::to($user->email)->send(new VerificationEmail($user, $url));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Register verification email failed', [
+                'user' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         if ($adminId) {
             $this->broadcastToAdminAndSuperAdmins($adminId, 'admin_users_updated');
@@ -154,10 +160,15 @@ class AuthController extends Controller
             $user->update(['verification_token' => $token]);
         }
 
-        $phpBinary = PHP_BINARY;
-        $artisan = base_path('artisan');
-        $logFile = storage_path('logs/verification-emails.log');
-        exec("{$phpBinary} {$artisan} mail:send-verification {$user->id} {$token} >> {$logFile} 2>&1 &");
+        try {
+            $frontendUrl = env('FRONTEND_URL', 'http://127.0.0.1:3333');
+            $url = rtrim($frontendUrl, '/').'/verify-email/'.$token;
+            Mail::to($user->email)->send(new VerificationEmail($user, $url));
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Error al enviar email: '.$e->getMessage(),
+            ], 500);
+        }
 
         return response()->json(['message' => 'Email de verificación reenviado. Revisá tu bandeja de entrada.']);
     }
