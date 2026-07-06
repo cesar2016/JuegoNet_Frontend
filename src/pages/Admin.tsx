@@ -11,7 +11,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { Settings, Users, FileText, Dice5, Search, Check, X, Clock, ArrowLeft, Trophy, PenLine, Trash2, Pencil as PencilIcon, Eye, ShoppingCart, Link2, Copy, UserPlus } from 'lucide-react';
 
-interface AllUser { id: number; name: string; email: string; whatsapp: string | null; status: string; role: string; created_at: string; admin: { id: number; name: string } | null; }
+interface AllUser { id: number; name: string; email: string; whatsapp: string | null; status: string; role: string; created_at: string; email_verified_at: string | null; admin: { id: number; name: string } | null; }
 interface AdminStat { id: number; name: string; email: string; role: string; last_login_at: string | null; managed_users_count: number; active_raffles_count: number; closed_raffles_count: number; }
 interface PaginatedAdminStats { data: AdminStat[]; current_page: number; last_page: number; per_page: number; total: number; from: number | null; to: number | null; }
 interface PaginatedUsers { data: AllUser[]; current_page: number; last_page: number; per_page: number; total: number; from: number | null; to: number | null; }
@@ -195,7 +195,13 @@ export default function Admin() {
         params.set('page', String(userPage));
         params.set('per_page', String(userPerPage));
         if (userSearch) params.set('q', userSearch);
-        if (userStatusFilter !== 'all') params.set('status', userStatusFilter);
+        if (userStatusFilter !== 'all') {
+          if (userStatusFilter === 'unverified') {
+            params.set('verified', 'false');
+          } else {
+            params.set('status', userStatusFilter);
+          }
+        }
         const res = await api.get<PaginatedUsers>(`/admin/users?${params.toString()}`);
         setAllUsers(res.data);
         setUserTotalPages(res.last_page);
@@ -568,7 +574,7 @@ export default function Admin() {
                 </form>
                 <select value={userStatusFilter} onChange={(e) => handleUserStatusFilterChange(e.target.value)} className="px-3 py-2 rounded-lg border border-gray-300 outline-none bg-white">
                   <option value="all">Todos los estados</option>
-                  <option value="pending_verification">Sin verificar</option>
+                  <option value="unverified">Sin verificar</option>
                   <option value="approved">Aprobados</option>
                   <option value="blocked">Bloqueados</option>
                 </select>
@@ -600,7 +606,7 @@ export default function Admin() {
                   ) : (
                     <div className="space-y-3">
                       {allUsers.map((u) => {
-                        const cardBg = u.status === 'pending_verification' ? 'bg-yellow-50 border border-yellow-200' : u.status === 'blocked' ? 'bg-red-50 border border-red-200' : 'bg-gray-50';
+                        const cardBg = !u.email_verified_at ? 'bg-yellow-50 border border-yellow-200' : u.status === 'blocked' ? 'bg-red-50 border border-red-200' : 'bg-gray-50';
                         return (
                           <div key={u.id} className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg p-4 ${cardBg}`}>
                             <div>
@@ -610,7 +616,7 @@ export default function Admin() {
                                 {u.role === 'admin' && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded ml-1">admin</span>}
                                 {u.role === 'user' && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded ml-1">usuario</span>}
                                 {u.status === 'blocked' && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded ml-1">bloqueado</span>}
-                                {u.status === 'pending_verification' && <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded ml-1">sin verificar</span>}
+                                {!u.email_verified_at && <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded ml-1">sin verificar</span>}
                               </p>
                               <p className="text-sm text-gray-500">{u.email}{u.whatsapp ? ` · ${u.whatsapp}` : ''}</p>
                               <p className="text-xs text-gray-400">Registrado: {new Date(u.created_at).toLocaleDateString('es-AR')}{u.role === 'user' && u.admin ? ` · Admin: ${u.admin.name}` : ''}</p>
@@ -625,7 +631,7 @@ export default function Admin() {
                                 </>
                               ) : (
                                 <>
-                                  <span className="text-sm font-semibold text-green-700">{u.status === 'approved' ? 'Activo' : u.status === 'pending_verification' ? 'Sin verificar' : 'Activo'}</span>
+                                  <span className="text-sm font-semibold text-green-700">{!u.email_verified_at ? 'Sin verificar' : 'Activo'}</span>
                                   <Tooltip text="Bloquear usuario, no podrá acceder al sistema">
                                     <div className="pt-1"><Switch checked={true} onChange={() => handleToggleBlock(u.id, false)} /></div>
                                   </Tooltip>
