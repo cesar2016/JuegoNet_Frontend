@@ -267,22 +267,28 @@ class AuthController extends Controller
 
     public function forgotPassword(Request $request): JsonResponse
     {
-        $validated = $request->validate(['email' => 'required|string|email|exists:users']);
+        $validated = $request->validate(['email' => 'required|string|email']);
 
-        $user = User::where('email', $validated['email'])->firstOrFail();
-        $token = Str::random(64);
+        $user = User::where('email', $validated['email'])->first();
 
-        DB::table('password_reset_tokens')->updateOrInsert(
-            ['email' => $user->email],
-            ['token' => Hash::make($token), 'created_at' => now()],
-        );
+        if ($user) {
+            $token = Str::random(64);
 
-        try {
-            $frontendUrl = env('FRONTEND_URL', 'http://127.0.0.1:3333');
-            $resetUrl = rtrim($frontendUrl, '/').'/reset-password/'.$token.'?email='.urlencode($user->email);
-            Mail::to($user->email)->send(new ResetPasswordEmail($user, $resetUrl));
-        } catch (\Throwable $e) {
-            return response()->json(['message' => 'Error al enviar email: '.$e->getMessage()], 500);
+            DB::table('password_reset_tokens')->updateOrInsert(
+                ['email' => $user->email],
+                ['token' => Hash::make($token), 'created_at' => now()],
+            );
+
+            try {
+                $frontendUrl = env('FRONTEND_URL', 'http://127.0.0.1:3333');
+                $resetUrl = rtrim($frontendUrl, '/').'/reset-password/'.$token.'?email='.urlencode($user->email);
+                Mail::to($user->email)->send(new ResetPasswordEmail($user, $resetUrl));
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Forgot password email failed', [
+                    'user' => $user->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         return response()->json(['message' => 'Si el email existe, recibirás un enlace para restablecer tu contraseña.']);
