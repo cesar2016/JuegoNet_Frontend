@@ -1,11 +1,13 @@
 #!/bin/bash
 set -e
+export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/bin:$PATH"
+PHP=$(command -v php) || { echo "PHP not found"; exit 1; }
 
-php artisan optimize
-php artisan migrate --force
+"$PHP" artisan optimize
+"$PHP" artisan migrate --force
 
 if [ "$SERVICE_TYPE" = "reverb" ]; then
-  php artisan reverb:start --host=0.0.0.0 --port=$PORT 2>&1 || echo "REVERB_CRASHED:$?" >&2
+  "$PHP" artisan reverb:start --host=0.0.0.0 --port=$PORT 2>&1 || echo "REVERB_CRASHED:$?" >&2
 else
-  php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
+  "$PHP" artisan serve --host=0.0.0.0 --port=${PORT:-8080}
 fi
