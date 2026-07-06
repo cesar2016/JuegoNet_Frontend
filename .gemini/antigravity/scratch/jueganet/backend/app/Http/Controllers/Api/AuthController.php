@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Events\AdminNotification;
 use App\Http\Controllers\Controller;
+use App\Mail\ResetPasswordEmail;
 use App\Mail\VerificationEmail;
 use App\Models\AdminInvite;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -261,5 +263,55 @@ class AuthController extends Controller
             'message' => 'Perfil actualizado.',
             'user' => $user->fresh(),
         ]);
+    }
+
+    public function forgotPassword(Request $request): JsonResponse
+    {
+        $validated = $request->validate(['email' => 'required|string|email|exists:users']);
+
+        $user = User::where('email', $validated['email'])->firstOrFail();
+        $token = Str::random(64);
+
+        DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $user->email],
+            ['token' => Hash::make($token), 'created_at' => now()],
+        );
+
+        try {
+            $frontendUrl = env('FRONTEND_URL', 'http://127.0.0.1:3333');
+            $resetUrl = rtrim($frontendUrl, '/').'/reset-password/'.$token.'?email='.urlencode($user->email);
+            Mail::to($user->email)->send(new ResetPasswordEmail($user, $resetUrl));
+        } catch (\Throwable $e) {
+            return response()->json(['message' => 'Error al enviar email: '.$e->getMessage()], 500);
+        }
+
+        return response()->json(['message' => 'Si el email existe, recibirás un enlace para restablecer tu contraseña.']);
+    }
+
+    public function resetPassword(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email' => 'required|string|email',
+            'token' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $record = DB::table('password_reset_tokens')->where('email', $validated['email'])->first();
+
+        if (! $record || ! Hash::check($validated['token'], $record->token)) {
+            return response()->json(['message' => 'El enlace no es válido o expiró.'], 400);
+        }
+
+        if (now()->diffInMinutes($record->created_at) > 60) {
+            DB::table('password_reset_tokens')->where('email', $validated['email'])->delete();
+            return response()->json(['message' => 'El enlace expiró. Solicita uno nuevo.'], 400);
+        }
+
+        $user = User::where('email', $validated['email'])->firstOrFail();
+        $user->update(['password' => Hash::make($validated['password'])]);
+
+        DB::table('password_reset_tokens')->where('email', $validated['email'])->delete();
+
+        return response()->json(['message' => 'Contraseña restablecida exitosamente. Ya podés iniciar sesión.']);
     }
 }

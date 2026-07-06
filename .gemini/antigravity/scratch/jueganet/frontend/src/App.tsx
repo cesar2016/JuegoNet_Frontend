@@ -7,6 +7,8 @@ import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
 import Profile from './pages/Profile';
 import VerifyEmail from './pages/VerifyEmail';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 function App() {
   const { user, loading } = useAuth();
@@ -20,7 +22,7 @@ function App() {
     );
   }
 
-  const isAuthPage = location.pathname === '/' || location.pathname === '/register';
+  const isAuthPage = location.pathname === '/' || location.pathname === '/register' || location.pathname === '/forgot-password' || location.pathname.startsWith('/reset-password');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-700 via-green-600 to-emerald-700">
@@ -29,6 +31,8 @@ function App() {
         <Route path="/" element={user ? <Navigate to={user.role === 'super_admin' || user.role === 'admin' ? '/admin' : '/dashboard'} /> : <Login />} />
         <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register />} />
         <Route path="/verify-email/:token" element={<VerifyEmail />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/" />} />
         <Route path="/admin" element={user && (user.role === 'super_admin' || user.role === 'admin') ? <Admin /> : <Navigate to="/" />} />
         <Route path="/profile" element={user ? <Profile /> : <Navigate to="/" />} />

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import api from '../lib/api';
 import { LockOpen, Mail } from 'lucide-react';
@@ -71,6 +71,9 @@ export default function Login() {
             className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition disabled:opacity-50">
             {loading ? 'Iniciando sesión...' : <span className="inline-flex items-center gap-2"><LockOpen size={18} /> Ingresar</span>}
           </button>
+          <p className="text-center text-sm text-gray-500">
+            <Link to="/forgot-password" className="text-green-600 hover:text-green-700 font-semibold">Olvidé mi contraseña</Link>
+          </p>
         </form>
 
         {showResend && (
