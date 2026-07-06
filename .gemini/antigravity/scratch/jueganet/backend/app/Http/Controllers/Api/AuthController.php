@@ -51,22 +51,24 @@ class AuthController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'status' => 'pending_verification',
+            'status' => 'approved',
+            'email_verified_at' => now(),
             'role' => $isFromSuper ? 'admin' : 'user',
             'admin_id' => $adminId,
             'verification_token' => $verificationToken,
         ]);
 
-        try {
-            $frontendUrl = env('FRONTEND_URL', 'http://127.0.0.1:3333');
-            $url = rtrim($frontendUrl, '/').'/verify-email/'.$verificationToken;
-            Mail::to($user->email)->send(new VerificationEmail($user, $url));
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Register verification email failed', [
-                'user' => $user->id,
-                'error' => $e->getMessage(),
-            ]);
-        }
+        // Email sending deshabilitado temporalmente hasta verificar dominio en Resend
+        // $frontendUrl = env('FRONTEND_URL', 'http://127.0.0.1:3333');
+        // $url = rtrim($frontendUrl, '/').'/verify-email/'.$verificationToken;
+        // try {
+        //     Mail::to($user->email)->send(new VerificationEmail($user, $url));
+        // } catch (\Throwable $e) {
+        //     \Illuminate\Support\Facades\Log::error('Register verification email failed', [
+        //         'user' => $user->id,
+        //         'error' => $e->getMessage(),
+        //     ]);
+        // }
 
         if ($adminId) {
             $this->broadcastToAdminAndSuperAdmins($adminId, 'admin_users_updated');
@@ -100,11 +102,9 @@ class AuthController extends Controller
             ], 403);
         }
 
+        // Auto-verify if email not yet verified (Resend solo envía a dueño de cuenta)
         if (! $user->email_verified_at) {
-            return response()->json([
-                'message' => 'Debés verificar tu email antes de iniciar sesión. Revisá tu bandeja de entrada.',
-                'status' => 'pending_verification',
-            ], 403);
+            $user->update(['email_verified_at' => now()]);
         }
 
         if ($user->status !== 'approved') {
