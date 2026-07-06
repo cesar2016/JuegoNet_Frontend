@@ -27,7 +27,6 @@ export default function Login() {
     } catch (err: unknown) {
       const apiErr = err as { data?: { message?: string; status?: string } };
       if (apiErr.data?.status === 'pending_verification') {
-        setError('Debés verificar tu email antes de iniciar sesión. Revisá tu bandeja de entrada.');
         setShowResend(true);
       } else {
         setError(apiErr.data?.message || 'Error al iniciar sesión');
@@ -55,7 +54,7 @@ export default function Login() {
           <img src="/logo.png" alt="JuegaNet" className="h-16 mx-auto mb-2" />
           <p className="text-gray-500 mt-2">Inicia sesión para continuar</p>
         </div>
-        {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4">{error}</div>}
+        {error && !showResend && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4">{error}</div>}
         {resendSent && <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg mb-4">Email de verificación reenviado. Revisá tu bandeja de entrada.</div>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -72,13 +71,33 @@ export default function Login() {
             className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition disabled:opacity-50">
             {loading ? 'Iniciando sesión...' : <span className="inline-flex items-center gap-2"><LockOpen size={18} /> Ingresar</span>}
           </button>
-          {showResend && !resendSent && (
-            <button type="button" onClick={handleResend} disabled={resendLoading}
-              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 rounded-lg transition inline-flex items-center justify-center gap-2 disabled:opacity-50">
-              {resendLoading ? 'Reenviando...' : <><Mail size={16} /> Reenviar email de verificación</>}
-            </button>
-          )}
         </form>
+
+        {showResend && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowResend(false); setResendSent(false); }}>
+            <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative" onClick={(e) => e.stopPropagation()}>
+              <button onClick={() => { setShowResend(false); setResendSent(false); }}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+              <div className="text-center mb-6">
+                <Mail size={48} className="mx-auto text-green-600 mb-2" />
+                <h2 className="text-xl font-bold text-gray-800">Verificá tu email</h2>
+              </div>
+              <p className="text-gray-600 text-center mb-6">
+                Debés verificar tu email antes de iniciar sesión. Revisá tu bandeja de entrada.
+              </p>
+              {!resendSent ? (
+                <button type="button" onClick={handleResend} disabled={resendLoading}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition inline-flex items-center justify-center gap-2 disabled:opacity-50">
+                  {resendLoading ? 'Reenviando...' : <><Mail size={18} /> Reenviar email de verificación</>}
+                </button>
+              ) : (
+                <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg text-center">
+                  Email de verificación reenviado. Revisá tu bandeja de entrada.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
