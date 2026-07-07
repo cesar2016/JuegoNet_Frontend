@@ -86,31 +86,31 @@ export default function Navbar() {
           )}
 
           <div className="hidden md:flex items-center gap-4">
-            <div className="relative z-[110]" ref={raffleRef}>
+            <div className="relative z-10" ref={raffleRef}>
               <button onClick={() => { setOpen(false); setRaffleDropdown(!raffleDropdown); setRaffleSearch(''); }} className="flex items-center gap-1 text-white hover:bg-white/10 px-3 py-2 rounded-lg transition text-sm font-semibold">
                 <Target className="text-green-200" size={18} />
                 Sorteos activos
                 <ChevronDown className={`transition ${raffleDropdown ? 'rotate-180' : ''}`} size={14} />
               </button>
               {raffleDropdown && (
-                <div className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-2xl py-2 min-w-[220px] z-[110]">
-                  <div className="px-3 pb-2">
+                <div className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-2xl min-w-[220px] z-50">
+                  <div className="px-3 pt-2 pb-1">
                     <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-3 py-2">
                       <Search size={14} className="text-gray-400 shrink-0" />
                       <input type="text" value={raffleSearch} onChange={(e) => setRaffleSearch(e.target.value)}
                         placeholder="Buscar sorteo..." className="bg-transparent outline-none text-sm text-gray-700 w-full" autoFocus />
                     </div>
                   </div>
-                  <div className="max-h-[250px] overflow-y-auto">
+                  <div className="max-h-60 overflow-y-auto">
                     {(() => {
                       const filtered = activeRaffles.filter((r) => r.name.toLowerCase().includes(raffleSearch.toLowerCase()));
                       const shown = filtered.slice(0, 5);
                       if (shown.length === 0) {
-                        return <p className="px-4 py-2 text-sm text-gray-400">Sin resultados</p>;
+                        return <p className="px-4 py-3 text-sm text-gray-400">Sin resultados</p>;
                       }
                       return shown.map((r) => (
                         <button key={r.id} onClick={() => { setRaffleDropdown(false); navigate(`/dashboard?raffle=${r.id}`); }}
-                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition">
+                          className="block w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition">
                           {r.name}
                         </button>
                       ));
