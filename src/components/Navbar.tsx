@@ -86,7 +86,7 @@ export default function Navbar() {
           )}
 
           <div className="hidden md:flex items-center gap-4">
-            <div className="relative z-10" ref={raffleRef}>
+            <div className="relative" ref={raffleRef}>
               <button onClick={() => { setOpen(false); setRaffleDropdown(!raffleDropdown); setRaffleSearch(''); }} className="flex items-center gap-1 text-white hover:bg-white/10 px-3 py-2 rounded-lg transition text-sm font-semibold">
                 <Target className="text-green-200" size={18} />
                 Sorteos activos
@@ -103,12 +103,13 @@ export default function Navbar() {
                   </div>
                   <div className="max-h-60 overflow-y-auto">
                     {(() => {
-                      const filtered = activeRaffles.filter((r) => r.name.toLowerCase().includes(raffleSearch.toLowerCase()));
-                      const shown = filtered.slice(0, 5);
-                      if (shown.length === 0) {
+                      const items = raffleSearch
+                        ? activeRaffles.filter((r) => r.name.toLowerCase().includes(raffleSearch.toLowerCase()))
+                        : activeRaffles;
+                      if (items.length === 0) {
                         return <p className="px-4 py-3 text-sm text-gray-400">Sin resultados</p>;
                       }
-                      return shown.map((r) => (
+                      return items.map((r) => (
                         <button key={r.id} onClick={() => { setRaffleDropdown(false); navigate(`/dashboard?raffle=${r.id}`); }}
                           className="block w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition">
                           {r.name}
@@ -116,11 +117,6 @@ export default function Navbar() {
                       ));
                     })()}
                   </div>
-                  {activeRaffles.filter((r) => r.name.toLowerCase().includes(raffleSearch.toLowerCase())).length > 5 && (
-                    <p className="px-4 py-1.5 text-xs text-gray-400 border-t border-gray-100 text-center">
-                      Desplazá para ver más
-                    </p>
-                  )}
                 </div>
               )}
             </div>
