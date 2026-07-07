@@ -65,7 +65,7 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="bg-white/10 backdrop-blur-md border-b border-white/20">
+      <nav className="bg-white/10 backdrop-blur-md border-b border-white/20 z-40 relative">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link to={user.role === 'super_admin' || user.role === 'admin' ? '/admin' : '/dashboard'} className="shrink-0">
             <img src="/logo.png" alt="JuegaNet" className="h-10 w-auto" />
