@@ -12,6 +12,7 @@ export default function Navbar() {
   const [raffleSearch, setRaffleSearch] = useState('');
   const [mobileMenu, setMobileMenu] = useState(false);
   const [mobileRaffle, setMobileRaffle] = useState(false);
+  const [mobileRaffleSearch, setMobileRaffleSearch] = useState('');
   const [activeRaffles, setActiveRaffles] = useState<{ id: number; name: string }[]>([]);
   const [admin, setAdmin] = useState<{ name: string; avatar: string | null } | null>(null);
   const navigate = useNavigate();
@@ -201,16 +202,29 @@ export default function Navbar() {
               </button>
               {mobileRaffle && (
                 <div className="bg-gray-50 border-t border-b border-gray-100">
-                  {activeRaffles.length === 0 ? (
-                    <p className="px-8 py-2 text-sm text-gray-400">No hay sorteos activos</p>
-                  ) : (
-                    activeRaffles.map((r) => (
-                      <button key={r.id} onClick={() => { navigate(`/dashboard?raffle=${r.id}`); closeMobile(); }}
-                        className="block w-full text-left px-8 py-2 text-sm text-gray-600 hover:bg-green-50 hover:text-green-700 transition">
-                        {r.name}
-                      </button>
-                    ))
-                  )}
+                  <div className="px-4 pt-3 pb-2">
+                    <div className="flex items-center gap-2 bg-white rounded-lg border border-gray-200 px-3 py-2">
+                      <Search size={14} className="text-gray-400 shrink-0" />
+                      <input type="text" value={mobileRaffleSearch} onChange={(e) => setMobileRaffleSearch(e.target.value)}
+                        placeholder="Buscar sorteo..." className="bg-transparent outline-none text-sm text-gray-700 w-full" />
+                    </div>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto">
+                    {(() => {
+                      const items = mobileRaffleSearch
+                        ? activeRaffles.filter((r) => r.name.toLowerCase().includes(mobileRaffleSearch.toLowerCase()))
+                        : activeRaffles;
+                      if (items.length === 0) {
+                        return <p className="px-8 py-3 text-sm text-gray-400">Sin resultados</p>;
+                      }
+                      return items.map((r) => (
+                        <button key={r.id} onClick={() => { navigate(`/dashboard?raffle=${r.id}`); closeMobile(); }}
+                          className="block w-full text-left px-8 py-2.5 text-sm text-gray-600 hover:bg-green-50 hover:text-green-700 transition">
+                          {r.name}
+                        </button>
+                      ));
+                    })()}
+                  </div>
                 </div>
               )}
             </div>
