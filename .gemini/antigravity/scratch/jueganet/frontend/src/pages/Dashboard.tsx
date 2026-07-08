@@ -10,7 +10,7 @@ import Modal from '../components/Modal';
 import confetti from 'canvas-confetti';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { Target, Eye, Loader, Trophy, Search, PartyPopper, Gift } from 'lucide-react';
+import { Target, Eye, Loader, Trophy, Search, PartyPopper, Gift, AlertTriangle, X } from 'lucide-react';
 
 interface Raffle { id: number; name: string; start_time: string; end_time: string; ticket_price: string; prizes_count?: number; prizes?: { description: string }[]; max_number?: number; drawn_at?: string | null; }
 interface TicketUser { name: string; avatar: string | null; }
@@ -37,6 +37,7 @@ export default function Dashboard() {
   const [winners, setWinners] = useState<Winner[]>([]);
   const [resultsLoading, setResultsLoading] = useState(false);
   const [showPrizes, setShowPrizes] = useState(false);
+  const [showLimitModal, setShowLimitModal] = useState(false);
 
   // DEBUG: log tickets state changes
   useEffect(() => {
@@ -220,6 +221,8 @@ export default function Dashboard() {
       console.error('[Dashboard] handleSelectNumber error:', err);
       if (apiErr.message?.includes('no está disponible')) {
         toast.warn('El número no está disponible por ahora', { position: 'top-center' });
+      } else if (apiErr.message?.includes('límite') || apiErr.message?.includes('2 números') || apiErr.message?.includes('máximo')) {
+        setShowLimitModal(true);
       } else {
         setError(apiErr.message || 'Error al seleccionar el número');
       }
@@ -403,6 +406,22 @@ export default function Dashboard() {
             {(!selectedRaffle?.prizes || selectedRaffle.prizes.length === 0) && (
               <p className="text-gray-500 text-center py-8">No se configuraron premios para este sorteo.</p>
             )}
+          </div>
+        </Modal>
+
+        <Modal isOpen={showLimitModal} onClose={() => setShowLimitModal(false)} title={<span className="inline-flex items-center gap-2"><AlertTriangle className="text-red-500" size={22} /> Límite alcanzado</span>}>
+          <div className="text-center py-6">
+            <div className="mx-auto w-20 h-20 rounded-full bg-red-100 flex items-center justify-center mb-4">
+              <AlertTriangle size={40} className="text-red-500" />
+            </div>
+            <p className="text-lg font-bold text-gray-800 mb-2">Alcanzaste el límite de 2 números por usuario.</p>
+            <p className="text-sm text-gray-500">No podés seleccionar más números en este sorteo.</p>
+            <button
+              onClick={() => setShowLimitModal(false)}
+              className="mt-6 px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-semibold transition inline-flex items-center gap-2"
+            >
+              <X size={18} /> Cerrar
+            </button>
           </div>
         </Modal>
       </main>
