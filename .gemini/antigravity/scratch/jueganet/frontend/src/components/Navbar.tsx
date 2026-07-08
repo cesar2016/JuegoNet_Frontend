@@ -57,9 +57,10 @@ export default function Navbar() {
 
   if (!user) return null;
 
-  const initial = user.name.charAt(0).toUpperCase();
+  const initial = user.name?.charAt(0).toUpperCase() ?? '?';
   const avatarUrl = user.avatar || null;
-  const adminInitial = admin ? admin.name.charAt(0).toUpperCase() : '';
+  const adminName = admin?.name || null;
+  const adminInitial = adminName ? adminName.charAt(0).toUpperCase() : '';
   const adminAvatar = admin?.avatar || null;
   const close = () => setOpen(false);
   const closeMobile = () => { setMobileMenu(false); setMobileRaffle(false); };
@@ -72,16 +73,16 @@ export default function Navbar() {
             <img src="/logo.png" alt="JuegaNet" className="h-10 w-auto" />
           </Link>
 
-          {admin && (
+          {adminName && (
             <div className="flex items-center gap-2 text-white">
               {adminAvatar ? (
-                <img src={adminAvatar} alt={admin.name} className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border-2 border-white/30" />
+                <img src={adminAvatar} alt={adminName} className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border-2 border-white/30" />
               ) : (
                 <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-green-300 flex items-center justify-center text-green-800 font-bold border-2 border-white/30">
                   {adminInitial}
                 </div>
               )}
-              <span className="hidden sm:inline text-base font-semibold">{admin.name}</span>
+              <span className="hidden sm:inline text-base font-semibold">{adminName}</span>
               <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">{user.role === 'admin' ? 'Super Admin' : 'Tu Admin'}</span>
             </div>
           )}
