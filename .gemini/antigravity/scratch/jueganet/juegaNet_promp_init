@@ -47,10 +47,30 @@ Api Key= re_WagyVVug_NvcYNDig2k5Lr3svSPx8w9w5
 
 -- ------------------------------------------------------------------ LOCAL y Remoto
 
-Usuarios:
-sadmin@jueganet.online
- 
+****** LOCAL:
+
+sadmin@jueganet.online 
 pass: admin123
+
+****** PRODUCCION:
+ 
+ - super_admin
+ 	sadmin@jueganet.online 
+	pass: admin123
+
+- Admin - 
+	Admin oficialadmin  --> id = 31
+	efectomarket@gmail.com
+
+- Usuarios - 
+	User Testing --> id = 33 
+	cesars.pro@gmail.com
+
+	User Tes oficialusuario --> id = 5
+	user@test.com
+	
+	
+DELETE->	alexissolucionmovil@gmail.com
 
 *********************************************************************** GITHUb ****
 BackEnd
