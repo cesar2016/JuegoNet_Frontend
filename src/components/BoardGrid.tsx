@@ -45,7 +45,8 @@ export default function BoardGrid({ tickets, currentUserId, onSelectNumber, load
   };
 
   return (
-    <div className="grid grid-cols-10 gap-2">
+    <div className="overflow-x-auto pb-2">
+      <div className="grid grid-cols-10 gap-2 min-w-[500px]">
       {tickets.map((ticket) => {
         const button = (
           <button
@@ -86,6 +87,7 @@ export default function BoardGrid({ tickets, currentUserId, onSelectNumber, load
           ? <Tooltip key={ticket.number} text={ticket.user.name}>{button}</Tooltip>
           : <div key={ticket.number}>{button}</div>;
       })}
+    </div>
     </div>
   );
 }
