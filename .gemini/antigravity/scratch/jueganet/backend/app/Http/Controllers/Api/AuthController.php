@@ -193,7 +193,7 @@ class AuthController extends Controller
 
         if ($user) {
             if ($user->isSuperAdmin()) {
-                return response()->json(null);
+                return response()->noContent();
             }
 
             if ($user->isAdmin()) {
