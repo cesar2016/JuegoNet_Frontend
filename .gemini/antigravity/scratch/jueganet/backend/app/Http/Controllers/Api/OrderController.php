@@ -93,6 +93,23 @@ class OrderController extends Controller
             return response()->json(['message' => 'Ya participás en 5 sorteos en simultáneo. No podés sumar uno nuevo.'], 422);
         }
 
+        if ($user->admin_id === 31) {
+            $userTickets = Ticket::where('user_id', $user->id)
+                ->whereIn('status', ['in_cart', 'pending_admin', 'sold'])
+                ->count();
+            if ($userTickets >= 2) {
+                return response()->json(['message' => 'Alcanzaste el límite de 2 números por usuario.'], 422);
+            }
+
+            $userRaffleIds = Order::where('user_id', $user->id)
+                ->whereIn('status', ['in_cart', 'pending_admin', 'sold'])
+                ->pluck('raffle_id')
+                ->unique();
+            if ($userRaffleIds->count() >= 1 && !$userRaffleIds->contains($raffle->id)) {
+                return response()->json(['message' => 'Solo podés participar en un sorteo a la vez.'], 422);
+            }
+        }
+
         return DB::transaction(function () use ($validated, $raffle, $user) {
             $ticket = Ticket::where('raffle_id', $raffle->id)
                 ->where('number', $validated['number'])
