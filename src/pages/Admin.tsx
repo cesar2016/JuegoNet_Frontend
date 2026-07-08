@@ -508,7 +508,7 @@ export default function Admin() {
                     </Tooltip>
                   </div>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-sm min-w-[700px] whitespace-nowrap">
                       <thead>
                         <tr className="border-b border-gray-200">
                           <th className="text-left py-3 px-2 font-semibold text-gray-600">Nombre</th>
