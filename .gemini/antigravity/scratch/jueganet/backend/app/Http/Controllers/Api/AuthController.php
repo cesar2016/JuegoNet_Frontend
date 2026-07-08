@@ -192,10 +192,20 @@ class AuthController extends Controller
         $user = $request->user();
 
         if ($user) {
+            if ($user->isSuperAdmin()) {
+                return response()->json(null);
+            }
+
             if ($user->isAdmin()) {
+                $superAdmin = User::where('role', 'super_admin')->first();
+
+                if (! $superAdmin) {
+                    return response()->json(['message' => 'No hay super administrador.'], 404);
+                }
+
                 return response()->json([
-                    'name' => $user->name,
-                    'avatar' => $user->avatar,
+                    'name' => $superAdmin->name,
+                    'avatar' => $superAdmin->avatar,
                 ]);
             }
 

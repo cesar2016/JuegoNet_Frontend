@@ -82,7 +82,7 @@ export default function Navbar() {
                 </div>
               )}
               <span className="hidden sm:inline text-base font-semibold">{admin.name}</span>
-              <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">{user.role === 'admin' || user.role === 'super_admin' ? 'Admin' : 'Tu Admin'}</span>
+              <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">{user.role === 'admin' ? 'Super Admin' : 'Tu Admin'}</span>
             </div>
           )}
 
