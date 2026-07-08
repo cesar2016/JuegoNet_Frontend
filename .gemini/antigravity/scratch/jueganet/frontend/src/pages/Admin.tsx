@@ -898,11 +898,15 @@ export default function Admin() {
                   })()}
                   {user?.role !== 'super_admin' && <form onSubmit={handleCreateRaffle} className="bg-gray-50 rounded-lg p-4 mb-6">
                     <h3 className="font-semibold text-gray-700 mb-3 inline-flex items-center gap-2"><PenLine className="text-green-600" size={20} /> Crear nuevo sorteo</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
                       <input type="text" value={raffleForm.name} onChange={(e) => setRaffleForm({ ...raffleForm, name: e.target.value })} placeholder="Nombre del sorteo" className="px-4 py-2 rounded-lg border border-gray-300 outline-none" required />
                       <input type="number" step="0.01" value={raffleForm.ticket_price} onChange={(e) => setRaffleForm({ ...raffleForm, ticket_price: e.target.value })} placeholder="Precio por número" className="px-4 py-2 rounded-lg border border-gray-300 outline-none" required />
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1 font-semibold">Exp. carrito (min)</label>
+                        <input type="number" min="1" max="120" value={raffleForm.cart_expiry_minutes} onChange={(e) => setRaffleForm({ ...raffleForm, cart_expiry_minutes: e.target.value })} className="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none" />
+                      </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                       <div>
                         <label className="block text-xs text-gray-500 mb-1 font-semibold">Desde (inicio)</label>
                         <input type="datetime-local" value={raffleForm.start_time} onChange={(e) => { setRaffleForm({ ...raffleForm, start_time: e.target.value }); setFormError(''); }} className={`w-full px-4 py-2 rounded-lg border outline-none ${formError ? 'border-red-500 bg-red-50' : 'border-gray-300'}`} required />
@@ -924,10 +928,6 @@ export default function Admin() {
                         }} className="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none bg-white">
                           {[1,2,3,4,5,6,7,8,9,10].map((n) => <option key={n} value={n}>{n} {n === 1 ? 'premio' : 'premios'}</option>)}
                         </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-500 mb-1 font-semibold">Exp. carrito (min)</label>
-                        <input type="number" min="1" max="120" value={raffleForm.cart_expiry_minutes} onChange={(e) => setRaffleForm({ ...raffleForm, cart_expiry_minutes: e.target.value })} className="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none" />
                       </div>
                       <div>
                         <label className="block text-xs text-gray-500 mb-1 font-semibold">Números (0 a ...)</label>
