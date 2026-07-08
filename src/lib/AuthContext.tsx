@@ -10,6 +10,7 @@ export interface User {
   status: string;
   avatar?: string | null;
   whatsapp?: string | null;
+  admin_id?: number | null;
 }
 
 interface AuthContextType {

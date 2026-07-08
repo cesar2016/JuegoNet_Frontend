@@ -65,6 +65,8 @@ export default function Dashboard() {
   }, [dateFrom, dateTo]);
 
   const isAdmin = user?.role === 'super_admin' || user?.role === 'admin';
+  const isRestricted = user?.admin_id === 31;
+  const userTicketCount = tickets.filter(t => (t.status === 'in_cart' || t.status === 'pending_admin') && t.user_id === user?.id).length;
 
   useEffect(() => {
     if (!pendingOrder || !selectedRaffle || !user) return;
@@ -272,6 +274,13 @@ export default function Dashboard() {
         {!showResults ? (
           <>
             {selectedRaffle && <div className="mb-6"><SuperCountdown startTime={selectedRaffle.start_time} endTime={selectedRaffle.end_time} title={selectedRaffle.name} /></div>}
+
+            {isRestricted && selectedRaffle && (
+              <div className="mb-4 px-4 py-2 rounded-lg bg-yellow-100 border border-yellow-300 text-yellow-800 text-sm font-semibold flex items-center gap-2">
+                <span>Límite: 2 números por usuario ({userTicketCount}/2 seleccionados)</span>
+                {userTicketCount >= 2 && <span className="ml-auto text-yellow-700">Máximo alcanzado</span>}
+              </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
               <div className="lg:col-span-3">
