@@ -589,11 +589,15 @@ export default function Admin() {
               <>
               <div className="flex flex-wrap items-center gap-3 mb-4">
                 <input type="text" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} placeholder="Búsqueda en tiempo real por nombre, email, rol..." className="flex-1 min-w-[200px] px-4 py-2 rounded-lg border border-gray-300 outline-none focus:border-green-500" />
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <span>Desde</span>
-                  <input type="date" value={userDateFrom} onChange={(e) => { setUserDateFrom(e.target.value); setUserPage(1); }} className="px-3 py-2 rounded-lg border border-gray-300 outline-none" />
-                  <span>Hasta</span>
-                  <input type="date" value={userDateTo} onChange={(e) => { setUserDateTo(e.target.value); setUserPage(1); }} className="px-3 py-2 rounded-lg border border-gray-300 outline-none" />
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm text-gray-500 w-full sm:w-auto">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 w-full sm:w-auto">
+                    <span>Desde</span>
+                    <input type="date" value={userDateFrom} onChange={(e) => { setUserDateFrom(e.target.value); setUserPage(1); }} className="w-full px-3 py-2 rounded-lg border border-gray-300 outline-none" />
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 w-full sm:w-auto">
+                    <span>Hasta</span>
+                    <input type="date" value={userDateTo} onChange={(e) => { setUserDateTo(e.target.value); setUserPage(1); }} className="w-full px-3 py-2 rounded-lg border border-gray-300 outline-none" />
+                  </div>
                 </div>
                 <select value={userStatusFilter} onChange={(e) => handleUserStatusFilterChange(e.target.value)} className="px-3 py-2 rounded-lg border border-gray-300 outline-none bg-white">
                   <option value="all">Todos los estados</option>
