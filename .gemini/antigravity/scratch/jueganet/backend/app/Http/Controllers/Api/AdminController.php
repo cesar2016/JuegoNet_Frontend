@@ -299,6 +299,16 @@ class AdminController extends Controller
             $query->whereNotNull('email_verified_at');
         }
 
+        $createdFrom = $request->input('created_from');
+        if ($createdFrom) {
+            $query->where('created_at', '>=', \Illuminate\Support\Carbon::parse($createdFrom)->startOfDay());
+        }
+
+        $createdTo = $request->input('created_to');
+        if ($createdTo) {
+            $query->where('created_at', '<=', \Illuminate\Support\Carbon::parse($createdTo)->endOfDay());
+        }
+
         $perPage = (int) $request->input('per_page', 10);
         if (! in_array($perPage, [5, 10, 20, 30, 50, 100], true)) {
             $perPage = 10;
