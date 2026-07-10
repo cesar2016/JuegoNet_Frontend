@@ -52,6 +52,7 @@ Route::middleware(['auth:sanctum', 'check.status'])->group(function () {
         Route::put('/admin/users/{user}', [AdminController::class, 'updateUser']);
         Route::post('/admin/users/{user}/block', [AdminController::class, 'blockUser']);
         Route::post('/admin/users/{user}/unblock', [AdminController::class, 'unblockUser']);
+        Route::post('/admin/users/{user}/toggle-role', [AdminController::class, 'toggleRole']);
         Route::post('/admin/upload-avatar', [AdminController::class, 'uploadAvatar']);
 
         Route::get('/admin/stats', [AdminController::class, 'stats']);

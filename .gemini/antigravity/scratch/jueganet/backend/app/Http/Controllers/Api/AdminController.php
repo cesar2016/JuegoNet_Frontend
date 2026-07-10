@@ -330,6 +330,27 @@ class AdminController extends Controller
         return response()->json(['message' => 'Perfil actualizado.', 'user' => $user->fresh()]);
     }
 
+    public function toggleRole(Request $request, User $user): JsonResponse
+    {
+        $authUser = $request->user();
+
+        if (! $authUser->isSuperAdmin()) {
+            return response()->json(['message' => 'Solo el super administrador puede cambiar roles.'], 403);
+        }
+
+        if ($user->isSuperAdmin()) {
+            return response()->json(['message' => 'No se puede cambiar el rol del super administrador.'], 422);
+        }
+
+        $newRole = $user->role === 'admin' ? 'user' : 'admin';
+        $user->update(['role' => $newRole]);
+
+        return response()->json([
+            'message' => "Rol cambiado a {$newRole}.",
+            'user' => $user->fresh(),
+        ]);
+    }
+
     public function adminStats(Request $request): JsonResponse
     {
         $perPage = min((int) $request->input('per_page', 10), 100);

@@ -380,6 +380,17 @@ export default function Admin() {
     }
   };
 
+  const handleToggleRole = async (userId: number) => {
+    try {
+      const res = await api.post<{ message: string; user: AllUser }>(`/admin/users/${userId}/toggle-role`);
+      setAllUsers((prev) => prev.map((u) => u.id === userId ? { ...u, role: res.user.role } : u));
+      toast.success(res.message);
+    } catch (err: unknown) {
+      const apiErr = err as { message?: string };
+      toast.error(apiErr.message || 'Error al cambiar rol');
+    }
+  };
+
   const handleApproveOrder = async (orderId: number) => {
     try {
       await api.post(`/admin/orders/${orderId}/approve`);
@@ -622,6 +633,12 @@ export default function Admin() {
                               <p className="text-xs text-gray-400">Registrado: {new Date(u.created_at).toLocaleDateString('es-AR')}{u.role === 'user' && u.admin ? ` · Admin: ${u.admin.name}` : ''}</p>
                             </div>
                             <div className="flex items-center gap-3 shrink-0">
+                              {user?.role === 'super_admin' && u.role !== 'super_admin' && (
+                                <div className="flex flex-col items-center gap-0.5">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{u.role === 'admin' ? 'admin' : 'usuario'}</span>
+                                  <Switch checked={u.role === 'admin'} onChange={() => handleToggleRole(u.id)} />
+                                </div>
+                              )}
                               {u.status === 'blocked' ? (
                                 <>
                                   <span className="text-sm font-semibold text-red-600">Bloqueado</span>
