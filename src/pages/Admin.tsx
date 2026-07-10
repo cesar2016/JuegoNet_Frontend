@@ -37,6 +37,8 @@ export default function Admin() {
   const [userSearch, setUserSearch] = useState('');
   const [userStatusFilter, setUserStatusFilter] = useState('all');
   const [searchInput, setSearchInput] = useState('');
+  const [userDateFrom, setUserDateFrom] = useState('');
+  const [userDateTo, setUserDateTo] = useState('');
   const [allOrders, setAllOrders] = useState<OrderItem[]>([]);
   const [orderPage, setOrderPage] = useState(1);
   const [orderPerPage, setOrderPerPage] = useState(10);
@@ -202,6 +204,8 @@ export default function Admin() {
             params.set('status', userStatusFilter);
           }
         }
+        if (userDateFrom) params.set('created_from', userDateFrom);
+        if (userDateTo) params.set('created_to', userDateTo);
         const res = await api.get<PaginatedUsers>(`/admin/users?${params.toString()}`);
         setAllUsers(res.data);
         setUserTotalPages(res.last_page);
@@ -271,10 +275,20 @@ export default function Admin() {
     fetchData();
   }, [activeTab]);
 
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setUserSearch(searchInput);
+      setUserPage(1);
+    }, 400);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [searchInput]);
+
   useEffect(() => {
     if (activeTab !== 'users') return;
     fetchData();
-  }, [userPage, userPerPage, userSearch, userStatusFilter]);
+  }, [userPage, userPerPage, userSearch, userStatusFilter, userDateFrom, userDateTo]);
 
   useEffect(() => {
     if (!viewAdminStats) return;
@@ -287,13 +301,7 @@ export default function Admin() {
       if (res.url) setInviteUrl(res.url);
     }).catch(() => {});
     fetchData();
-  }, [activeTab, userPage, userPerPage, userSearch, userStatusFilter]);
-
-  const handleUserSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setUserPage(1);
-    setUserSearch(searchInput);
-  };
+  }, [activeTab, userPage, userPerPage, userSearch, userStatusFilter, userDateFrom, userDateTo]);
 
   const handleUserStatusFilterChange = (value: string) => {
     setUserPage(1);
@@ -580,9 +588,13 @@ export default function Admin() {
               ) : (
               <>
               <div className="flex flex-wrap items-center gap-3 mb-4">
-                <form onSubmit={handleUserSearchSubmit} className="flex-1 min-w-[200px]">
-                  <input type="text" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} placeholder="Buscar por nombre, email, whatsapp, status o rol..." className="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none focus:border-green-500" />
-                </form>
+                <input type="text" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} placeholder="Búsqueda en tiempo real por nombre, email, rol..." className="flex-1 min-w-[200px] px-4 py-2 rounded-lg border border-gray-300 outline-none focus:border-green-500" />
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <span>Desde</span>
+                  <input type="date" value={userDateFrom} onChange={(e) => { setUserDateFrom(e.target.value); setUserPage(1); }} className="px-3 py-2 rounded-lg border border-gray-300 outline-none" />
+                  <span>Hasta</span>
+                  <input type="date" value={userDateTo} onChange={(e) => { setUserDateTo(e.target.value); setUserPage(1); }} className="px-3 py-2 rounded-lg border border-gray-300 outline-none" />
+                </div>
                 <select value={userStatusFilter} onChange={(e) => handleUserStatusFilterChange(e.target.value)} className="px-3 py-2 rounded-lg border border-gray-300 outline-none bg-white">
                   <option value="all">Todos los estados</option>
                   <option value="unverified">Sin verificar</option>
@@ -592,9 +604,6 @@ export default function Admin() {
                 <select value={userPerPage} onChange={(e) => handleUserPerPageChange(Number(e.target.value))} className="px-3 py-2 rounded-lg border border-gray-300 outline-none bg-white">
                   {[5, 10, 20, 30, 50, 100].map((n) => <option key={n} value={n}>{n} por pág.</option>)}
                 </select>
-                <Tooltip text="Ejecutar búsqueda">
-                  <button type="button" onClick={() => { setUserPage(1); setUserSearch(searchInput); }} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition inline-flex items-center gap-2"><Search size={16} /> Buscar</button>
-                </Tooltip>
                 <Tooltip text="Generar enlace de registro para nuevos usuarios">
                   <button type="button" onClick={handleGenerateInvite} disabled={inviteLoading} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition inline-flex items-center gap-2"><UserPlus size={16} /> {inviteLoading ? 'Generando...' : 'Crear usuario'}</button>
                 </Tooltip>
