@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
+import { avatarUrl } from '../lib/avatar';
 import api from '../lib/api';
 import { getEcho } from '../lib/echo';
 import SuperCountdown from '../components/SuperCountdown';
@@ -367,11 +368,7 @@ export default function Dashboard() {
                               <p className="font-semibold text-gray-800">{w.user.name}</p>
                               <p className="text-sm text-gray-500">{w.user.email}</p>
                             </div>
-                            {w.user.avatar ? (
-                              <img src={w.user.avatar} alt="" className="w-10 h-10 rounded-full object-cover" />
-                            ) : (
-                              <div className="w-10 h-10 rounded-full bg-green-300 flex items-center justify-center text-green-800 font-bold">{w.user.name.charAt(0).toUpperCase()}</div>
-                            )}
+                            <img src={avatarUrl(w.user.name, w.user.avatar)} alt="" className="w-10 h-10 rounded-full object-cover" />
                           </div>
                         ) : (
                           <p className="text-sm text-red-600 font-semibold">Número no vendido</p>

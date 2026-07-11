@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import api from '../lib/api';
 import { getEcho } from '../lib/echo';
+import { avatarUrl } from '../lib/avatar';
 import { Target, Trophy, Search, Settings, LayoutDashboard, User, LogOut, ChevronDown, Menu, X } from 'lucide-react';
 
 export default function Navbar() {
@@ -57,11 +58,9 @@ export default function Navbar() {
 
   if (!user) return null;
 
-  const initial = user.name?.charAt(0).toUpperCase() ?? '?';
-  const avatarUrl = user.avatar || null;
+  const userAvatar = avatarUrl(user.name, user.avatar);
   const adminName = admin?.name || null;
-  const adminInitial = adminName ? adminName.charAt(0).toUpperCase() : '';
-  const adminAvatar = admin?.avatar || null;
+  const adminAvatarUrl = avatarUrl(adminName || 'A', admin?.avatar);
   const close = () => setOpen(false);
   const closeMobile = () => { setMobileMenu(false); setMobileRaffle(false); };
 
@@ -75,13 +74,7 @@ export default function Navbar() {
 
           {adminName && (
             <div className="flex items-center gap-2 text-white">
-              {adminAvatar ? (
-                <img src={adminAvatar} alt={adminName} className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border-2 border-white/30" />
-              ) : (
-                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-green-300 flex items-center justify-center text-green-800 font-bold border-2 border-white/30">
-                  {adminInitial}
-                </div>
-              )}
+              <img src={adminAvatarUrl} alt={adminName} className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border-2 border-white/30" />
               <span className="hidden sm:inline text-base font-semibold">{adminName}</span>
               <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">{user.role === 'admin' ? 'Super Admin' : 'Tu Admin'}</span>
             </div>
@@ -134,13 +127,7 @@ export default function Navbar() {
               onClick={() => { setRaffleDropdown(false); setOpen(!open); }}
               className="flex items-center gap-2 text-white hover:bg-white/10 px-3 py-2 rounded-lg transition shrink-0"
             >
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-green-300 flex items-center justify-center text-green-800 font-bold text-sm">
-                  {initial}
-                </div>
-              )}
+              <img src={userAvatar} alt="" className="w-8 h-8 rounded-full object-cover" />
               <span className="text-sm font-medium">{user.name}</span>
               <ChevronDown className={`transition ${open ? 'rotate-180' : ''}`} size={16} />
             </button>
@@ -180,11 +167,7 @@ export default function Navbar() {
       {mobileMenu && (
         <div className="md:hidden fixed z-[100] left-0 right-0 bg-white shadow-2xl border-t border-gray-100">
           <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border-b border-gray-100">
-            {avatarUrl ? (
-              <img src={avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover" />
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-green-300 flex items-center justify-center text-green-800 font-bold">{initial}</div>
-            )}
+            <img src={userAvatar} alt="" className="w-10 h-10 rounded-full object-cover" />
             <div className="min-w-0">
               <p className="font-semibold text-gray-800 text-sm truncate">{user.name}</p>
               <p className="text-xs text-gray-500 truncate">{user.email}</p>

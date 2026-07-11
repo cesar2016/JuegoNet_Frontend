@@ -2,6 +2,7 @@ import { useState, useEffect, type FormEvent, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, type User } from '../lib/AuthContext';
 import api from '../lib/api';
+import { avatarUrl as dicebear } from '../lib/avatar';
 import Tooltip from '../components/Tooltip';
 import { User as UserIcon, Save, ArrowLeft, Camera } from 'lucide-react';
 
@@ -61,8 +62,6 @@ export default function Profile() {
     }
   };
 
-  const initial = user?.name?.charAt(0).toUpperCase() ?? '?';
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-700 via-green-600 to-emerald-700">
       <main className="max-w-2xl mx-auto px-4 py-8">
@@ -75,11 +74,7 @@ export default function Profile() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="flex flex-col items-center mb-6">
               <div className="relative mb-4">
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt="" className="w-24 h-24 rounded-full object-cover border-4 border-green-200" />
-                ) : (
-                  <div className="w-24 h-24 rounded-full bg-green-300 flex items-center justify-center text-green-800 font-bold text-3xl border-4 border-green-200">{initial}</div>
-                )}
+                <img src={avatarUrl || dicebear(user?.name || '?')} alt="" className="w-24 h-24 rounded-full object-cover border-4 border-green-200" />
                 <Tooltip text="Subir foto de perfil">
                   <label className="absolute bottom-0 right-0 bg-green-600 text-white rounded-full p-2 cursor-pointer hover:bg-green-700 transition shadow-lg">
                     <Camera size={18} />
