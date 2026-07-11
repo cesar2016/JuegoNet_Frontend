@@ -1,4 +1,4 @@
-const STYLE = 'lorelei';
+const STYLE = 'avataaars';
 const BASE = 'https://api.dicebear.com/9.x';
 
 export function avatarUrl(seed: string, customUrl?: string | null): string {
