@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import api from '../lib/api';
+import { avatarUrl } from '../lib/avatar';
 import { getEcho } from '../lib/echo';
 import Tooltip from '../components/Tooltip';
 import Switch from '../components/Switch';
@@ -11,7 +12,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { Settings, Users, FileText, Dice5, Search, Check, X, Clock, ArrowLeft, Trophy, PenLine, Trash2, Pencil as PencilIcon, Eye, ShoppingCart, Link2, Copy, UserPlus } from 'lucide-react';
 
-interface AllUser { id: number; name: string; email: string; whatsapp: string | null; status: string; role: string; created_at: string; email_verified_at: string | null; admin: { id: number; name: string } | null; }
+interface AllUser { id: number; name: string; email: string; whatsapp: string | null; status: string; role: string; created_at: string; email_verified_at: string | null; avatar: string | null; admin: { id: number; name: string } | null; }
 interface AdminStat { id: number; name: string; email: string; role: string; last_login_at: string | null; managed_users_count: number; active_raffles_count: number; closed_raffles_count: number; }
 interface PaginatedAdminStats { data: AdminStat[]; current_page: number; last_page: number; per_page: number; total: number; from: number | null; to: number | null; }
 interface PaginatedUsers { data: AllUser[]; current_page: number; last_page: number; per_page: number; total: number; from: number | null; to: number | null; }
@@ -633,17 +634,20 @@ export default function Admin() {
                         const cardBg = !u.email_verified_at ? 'bg-yellow-50 border border-yellow-200' : u.status === 'blocked' ? 'bg-red-50 border border-red-200' : 'bg-gray-50';
                         return (
                           <div key={u.id} className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg p-4 ${cardBg}`}>
-                            <div>
-                              <p className="font-semibold text-gray-800">
-                                {u.name}
-                                {u.role === 'super_admin' && <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded ml-1">super_admin</span>}
-                                {u.role === 'admin' && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded ml-1">admin</span>}
-                                {u.role === 'user' && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded ml-1">usuario</span>}
-                                {u.status === 'blocked' && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded ml-1">bloqueado</span>}
-                                {!u.email_verified_at && <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded ml-1">sin verificar</span>}
-                              </p>
-                              <p className="text-sm text-gray-500">{u.email}{u.whatsapp ? ` · ${u.whatsapp}` : ''}</p>
-                              <p className="text-xs text-gray-400">Registrado: {new Date(u.created_at).toLocaleDateString('es-AR')}{u.role === 'user' && u.admin ? ` · Admin: ${u.admin.name}` : ''}</p>
+                            <div className="flex items-center gap-3">
+                              <img src={avatarUrl(u.name, u.avatar)} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
+                              <div>
+                                <p className="font-semibold text-gray-800">
+                                  {u.name}
+                                  {u.role === 'super_admin' && <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded ml-1">super_admin</span>}
+                                  {u.role === 'admin' && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded ml-1">admin</span>}
+                                  {u.role === 'user' && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded ml-1">usuario</span>}
+                                  {u.status === 'blocked' && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded ml-1">bloqueado</span>}
+                                  {!u.email_verified_at && <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded ml-1">sin verificar</span>}
+                                </p>
+                                <p className="text-sm text-gray-500">{u.email}{u.whatsapp ? ` · ${u.whatsapp}` : ''}</p>
+                                <p className="text-xs text-gray-400">Registrado: {new Date(u.created_at).toLocaleDateString('es-AR')}{u.role === 'user' && u.admin ? ` · Admin: ${u.admin.name}` : ''}</p>
+                              </div>
                             </div>
                             <div className="flex items-center gap-3 shrink-0">
                               {user?.role === 'super_admin' && u.role !== 'super_admin' && (
@@ -840,7 +844,7 @@ export default function Admin() {
                               </div>
                               {w.user ? (
                                 <div className="flex items-center gap-2">
-                                  {w.user.avatar ? <img src={w.user.avatar} alt="" className="w-8 h-8 rounded-full object-cover" /> : <div className="w-8 h-8 rounded-full bg-green-300 flex items-center justify-center text-green-800 font-bold text-xs">{w.user.name.charAt(0).toUpperCase()}</div>}
+                                <img src={avatarUrl(w.user.name, w.user.avatar)} alt="" className="w-8 h-8 rounded-full object-cover" />
                                   <div className="text-right">
                                     <p className="font-semibold text-gray-800 text-sm">{w.user.name}</p>
                                     <p className="text-xs text-gray-500">{w.user.email}</p>
@@ -877,11 +881,7 @@ export default function Admin() {
                       {participants.map((p) => (
                         <div key={p.user.id} className="bg-gray-50 rounded-lg p-4">
                           <div className="flex items-center gap-3 mb-3">
-                            {p.user.avatar ? (
-                              <img src={p.user.avatar} alt="" className="w-10 h-10 rounded-full object-cover" />
-                            ) : (
-                              <div className="w-10 h-10 rounded-full bg-green-300 flex items-center justify-center text-green-800 font-bold">{p.user.name.charAt(0).toUpperCase()}</div>
-                            )}
+                            <img src={avatarUrl(p.user.name, p.user.avatar)} alt="" className="w-10 h-10 rounded-full object-cover" />
                             <div>
                               <p className="font-semibold text-gray-800">{p.user.name}</p>
                               <p className="text-sm text-gray-500">{p.user.email}</p>

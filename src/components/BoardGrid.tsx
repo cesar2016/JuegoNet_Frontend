@@ -1,3 +1,4 @@
+import { avatarUrl } from '../lib/avatar';
 import Tooltip from './Tooltip';
 import { ShoppingCart, Clock } from 'lucide-react';
 
@@ -71,13 +72,7 @@ export default function BoardGrid({ tickets, currentUserId, onSelectNumber, load
             )}
             {ticket.user && (
               <div className="absolute -top-2 -right-2">
-                {ticket.user?.avatar ? (
-                  <img src={ticket.user.avatar} alt="" className="w-7 h-7 rounded-full border-2 border-white object-cover" />
-                ) : (
-                  <div className="w-7 h-7 rounded-full border-2 border-white bg-gray-700 text-white text-[10px] flex items-center justify-center font-bold">
-                    {ticket.user?.name?.charAt(0).toUpperCase() ?? '?'}
-                  </div>
-                )}
+                <img src={avatarUrl(ticket.user?.name || '?', ticket.user?.avatar)} alt="" className="w-7 h-7 rounded-full border-2 border-white object-cover" />
               </div>
             )}
           </button>
