@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AdminInvite;
 use App\Models\Order;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -385,9 +386,17 @@ class AdminController extends Controller
             });
         }
 
+        if ($createdFrom = $request->input('created_from')) {
+            $query->where('created_at', '>=', Carbon::parse($createdFrom)->startOfDay());
+        }
+
+        if ($createdTo = $request->input('created_to')) {
+            $query->where('created_at', '<=', Carbon::parse($createdTo)->endOfDay());
+        }
+
         $admins = $query->orderBy('role')
             ->orderBy('name')
-            ->paginate($perPage, ['id', 'name', 'email', 'role', 'last_login_at']);
+            ->paginate($perPage, ['id', 'name', 'email', 'role', 'last_login_at', 'created_at']);
 
         return response()->json($admins);
     }
