@@ -73,6 +73,8 @@ export default function Admin() {
   const [adminStatTo, setAdminStatTo] = useState<number | null>(null);
   const [adminStatSearchInput, setAdminStatSearchInput] = useState('');
   const [adminStatSearch, setAdminStatSearch] = useState('');
+  const [adminStatDateFrom, setAdminStatDateFrom] = useState('');
+  const [adminStatDateTo, setAdminStatDateTo] = useState('');
   const [viewAdminStats, setViewAdminStats] = useState(false);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [inviteLoading, setInviteLoading] = useState(false);
@@ -240,6 +242,8 @@ export default function Admin() {
     params.set('page', String(adminStatPage));
     params.set('per_page', String(adminStatPerPage));
     if (adminStatSearch) params.set('q', adminStatSearch);
+    if (adminStatDateFrom) params.set('created_from', adminStatDateFrom);
+    if (adminStatDateTo) params.set('created_to', adminStatDateTo);
     try {
       const res = await api.get<PaginatedAdminStats>(`/admin/admin-stats?${params.toString()}`);
       setAdminStats(res.data);
@@ -286,6 +290,16 @@ export default function Admin() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [searchInput]);
 
+  const adminStatDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (adminStatDebounceRef.current) clearTimeout(adminStatDebounceRef.current);
+    adminStatDebounceRef.current = setTimeout(() => {
+      setAdminStatSearch(adminStatSearchInput);
+      setAdminStatPage(1);
+    }, 400);
+    return () => { if (adminStatDebounceRef.current) clearTimeout(adminStatDebounceRef.current); };
+  }, [adminStatSearchInput]);
+
   useEffect(() => {
     if (activeTab !== 'users') return;
     fetchData();
@@ -294,7 +308,7 @@ export default function Admin() {
   useEffect(() => {
     if (!viewAdminStats) return;
     fetchAdminStats();
-  }, [adminStatPage, adminStatPerPage, adminStatSearch, viewAdminStats]);
+  }, [adminStatPage, adminStatPerPage, adminStatSearch, viewAdminStats, adminStatDateFrom, adminStatDateTo]);
 
   useEffect(() => {
     if (activeTab !== 'users') return;
@@ -517,15 +531,20 @@ export default function Admin() {
               {viewAdminStats ? (
                 <>
                   <div className="flex flex-wrap items-center gap-3 mb-4">
-                    <form onSubmit={(e) => { e.preventDefault(); setAdminStatPage(1); setAdminStatSearch(adminStatSearchInput); }} className="flex-1 min-w-[200px]">
-                      <input type="text" value={adminStatSearchInput} onChange={(e) => setAdminStatSearchInput(e.target.value)} placeholder="Buscar por nombre, email o rol..." className="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none focus:border-green-500" />
-                    </form>
+                    <input type="text" value={adminStatSearchInput} onChange={(e) => setAdminStatSearchInput(e.target.value)} placeholder="Búsqueda en tiempo real por nombre, email, rol..." className="flex-1 min-w-[200px] px-4 py-2 rounded-lg border border-gray-300 outline-none focus:border-green-500" />
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm text-gray-500 w-full sm:w-auto">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 w-full sm:w-auto">
+                        <span>Desde</span>
+                        <input type="date" value={adminStatDateFrom} onChange={(e) => { setAdminStatDateFrom(e.target.value); setAdminStatPage(1); }} className="w-full px-3 py-2 rounded-lg border border-gray-300 outline-none" />
+                      </div>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 w-full sm:w-auto">
+                        <span>Hasta</span>
+                        <input type="date" value={adminStatDateTo} onChange={(e) => { setAdminStatDateTo(e.target.value); setAdminStatPage(1); }} className="w-full px-3 py-2 rounded-lg border border-gray-300 outline-none" />
+                      </div>
+                    </div>
                     <select value={adminStatPerPage} onChange={(e) => { setAdminStatPage(1); setAdminStatPerPage(Number(e.target.value)); }} className="px-3 py-2 rounded-lg border border-gray-300 outline-none bg-white">
                       {[5, 10, 20, 30, 50, 100].map((n) => <option key={n} value={n}>{n} por pág.</option>)}
                     </select>
-                    <Tooltip text="Ejecutar búsqueda">
-                      <button type="button" onClick={() => { setAdminStatPage(1); setAdminStatSearch(adminStatSearchInput); }} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition inline-flex items-center gap-2"><Search size={16} /> Buscar</button>
-                    </Tooltip>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm min-w-[700px] whitespace-nowrap">
