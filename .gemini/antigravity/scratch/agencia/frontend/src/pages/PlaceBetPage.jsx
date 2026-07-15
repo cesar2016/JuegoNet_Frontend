@@ -166,6 +166,7 @@ export default function PlaceBetPage() {
             <label className="text-xs text-gray-400 block mb-1 text-center">Numero</label>
             <input
               type="text"
+              inputMode="numeric"
               maxLength={4}
               value={number}
               onChange={(e) => setNumber(e.target.value.replace(/\D/g, ''))}
@@ -178,6 +179,7 @@ export default function PlaceBetPage() {
             <label className="text-xs text-gray-400 block mb-1 text-center">Posicion</label>
             <input
               type="text"
+              inputMode="numeric"
               maxLength={2}
               value={position}
               onChange={(e) => setPosition(e.target.value.replace(/\D/g, ''))}
