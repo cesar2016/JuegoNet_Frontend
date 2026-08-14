@@ -74,7 +74,7 @@ export default function Profile() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="flex flex-col items-center mb-6">
               <div className="relative mb-4">
-                <img src={avatarUrl || dicebear(user?.name || '?')} alt="" className="w-24 h-24 rounded-full object-cover border-4 border-green-200" />
+                <img src={dicebear(user?.name || '?', avatarUrl)} alt="" className="w-24 h-24 rounded-full object-cover border-4 border-green-200" />
                 <Tooltip text="Subir foto de perfil">
                   <label className="absolute bottom-0 right-0 bg-green-600 text-white rounded-full p-2 cursor-pointer hover:bg-green-700 transition shadow-lg">
                     <Camera size={18} />
