@@ -18,7 +18,7 @@ interface PaginatedAdminStats { data: AdminStat[]; current_page: number; last_pa
 interface PaginatedUsers { data: AllUser[]; current_page: number; last_page: number; per_page: number; total: number; from: number | null; to: number | null; }
 interface OrderItem { order: { id: number; total_price: string; status: string; confirmed_at: string | null; user: { name: string; email: string }; raffle: { id: number; name: string } | null; tickets: { id: number; number: number }[]; created_at: string; }; remaining_seconds: number; }
 interface PaginatedOrders { data: OrderItem[]; current_page: number; last_page: number; per_page: number; total: number; from: number | null; to: number | null; }
-interface Raffle { id: number; name: string; is_active: boolean; start_time: string; end_time: string; ticket_price: string; prizes_count: number; prizes: { description: string }[]; cart_expiry_minutes?: number; max_number: number; winning_numbers: number[] | null; drawn_at: string | null; admin: { id: number; name: string } | null; can_edit?: boolean; }
+interface Raffle { id: number; name: string; is_active: boolean; start_time: string; end_time: string; ticket_price: string; prizes_count: number; prizes: { description: string }[]; cart_expiry_minutes?: number; max_number: number; winning_numbers: number[] | null; drawn_at: string | null; admin: { id: number; name: string } | null; can_edit?: boolean; public_token?: string; }
 interface ParticipantTicket { id: number; number: number; status: string; }
 interface Participant { user: { id: number; name: string; email: string; avatar: string | null; whatsapp: string | null }; tickets: ParticipantTicket[]; }
 interface Winner { position: number; number: number; prize: string | null; user: { id: number; name: string; email: string; avatar: string | null; whatsapp: string | null } | null; }
@@ -1020,7 +1020,7 @@ export default function Admin() {
                             )}
                           </div>
                           <div className="flex flex-wrap gap-2">
-                            <Tooltip text="Copiar enlace público del tablero"><button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/s/${r.id}`); toast.success('Enlace público copiado al portapapeles'); }} className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-semibold transition inline-flex items-center gap-1"><Link2 size={16} /> Compartir Público</button></Tooltip>
+                            <Tooltip text="Copiar enlace público del tablero"><button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/s/${r.public_token}`); toast.success('Enlace público copiado al portapapeles'); }} className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-2 rounded-lg text-xs font-semibold transition inline-flex items-center gap-1"><Link2 size={14} /> Compartir</button></Tooltip>
                             <Tooltip text="Ver participantes"><button onClick={() => handleViewParticipants(r)} className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-lg transition inline-flex items-center justify-center"><Eye size={16} /></button></Tooltip>
                             {r.can_edit && user?.role !== 'super_admin' && (
                               <>
