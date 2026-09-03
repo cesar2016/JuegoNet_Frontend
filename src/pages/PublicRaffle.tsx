@@ -8,7 +8,7 @@ import SuperCountdown from '../components/SuperCountdown';
 import BoardGrid from '../components/BoardGrid';
 import Modal from '../components/Modal';
 
-interface Raffle { id: number; name: string; start_time: string; end_time: string; ticket_price: string; max_number?: number; admin_id?: number | null; prizes?: { description: string }[]; }
+interface Raffle { id: number; name: string; start_time: string; end_time: string; ticket_price: string; max_number?: number; admin_id?: number | null; is_active?: boolean; drawn_at?: string | null; prizes?: { description: string }[]; }
 interface Ticket { id: number; number: number; status: string; user_id: number | null; user: { name: string; avatar: string | null } | null; }
 
 export default function PublicRaffle() {
@@ -58,7 +58,10 @@ export default function PublicRaffle() {
     return () => { echo.connector.pusher.unbind_global(handler); };
   }, [raffle]);
 
+  const isFinished = raffle && (raffle.is_active === false || !!raffle.drawn_at || new Date(raffle.end_time) < new Date());
+
   const handleSelectNumber = () => {
+    if (isFinished) return;
     setShowLoginModal(true);
   };
 
@@ -109,7 +112,22 @@ export default function PublicRaffle() {
         <h1 className="text-white text-3xl font-black italic truncate">JuegaNet</h1>
       </div>
 
-      <div className="mb-6"><SuperCountdown startTime={raffle.start_time} endTime={raffle.end_time} title={raffle.name} /></div>
+      {isFinished && (
+        <div className="mb-6 bg-red-600 border border-red-400 text-white p-4 rounded-xl shadow-lg flex items-center justify-center font-bold text-lg text-center animate-pulse">
+          ¡ESTE SORTEO YA FINALIZÓ!
+        </div>
+      )}
+
+      <div className="mb-6">
+        {isFinished ? (
+          <div className="bg-black/40 backdrop-blur-md rounded-xl p-6 text-center shadow-lg border border-white/10">
+            <h2 className="text-white font-bold text-2xl truncate mb-2">{raffle.name}</h2>
+            <p className="text-white/80 font-semibold uppercase tracking-widest text-sm">Sorteo Cerrado</p>
+          </div>
+        ) : (
+          <SuperCountdown startTime={raffle.start_time} endTime={raffle.end_time} title={raffle.name} />
+        )}
+      </div>
 
       <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 md:p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
@@ -129,7 +147,7 @@ export default function PublicRaffle() {
           currentUserId={null} 
           onSelectNumber={handleSelectNumber} 
           loading={loading} 
-          readOnly={false} // Se deja false para que de la alerta de iniciar sesion al tocar
+          readOnly={!!isFinished}
           maxNumber={raffle.max_number ?? 99} 
         />
       </div>

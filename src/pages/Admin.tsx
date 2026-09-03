@@ -76,9 +76,7 @@ export default function Admin() {
   const [adminStatDateFrom, setAdminStatDateFrom] = useState('');
   const [adminStatDateTo, setAdminStatDateTo] = useState('');
   const [viewAdminStats, setViewAdminStats] = useState(false);
-  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
-  const [inviteLoading, setInviteLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
+
   const [fastUserName, setFastUserName] = useState('');
   const [fastUserWhatsapp, setFastUserWhatsapp] = useState('');
   const [fastUserEmail, setFastUserEmail] = useState('');
@@ -334,25 +332,7 @@ export default function Admin() {
     setUserPerPage(value);
   };
 
-  const handleGenerateInvite = async () => {
-    setInviteLoading(true);
-    try {
-      const res = await api.post<{ url: string }>('/admin/invite');
-      setInviteUrl(res.url);
-      setCopied(false);
-    } catch {
-      toast.error('Error al generar enlace');
-    }
-    setInviteLoading(false);
-  };
 
-  const handleCopyInvite = () => {
-    if (!inviteUrl) return;
-    navigator.clipboard.writeText(inviteUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    toast.success('Enlace copiado al portapapeles');
-  };
 
   const handleOrderSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -655,9 +635,6 @@ export default function Admin() {
                 <select value={userPerPage} onChange={(e) => handleUserPerPageChange(Number(e.target.value))} className="px-3 py-2 rounded-lg border border-gray-300 outline-none bg-white">
                   {[5, 10, 20, 30, 50, 100].map((n) => <option key={n} value={n}>{n} por pág.</option>)}
                 </select>
-                <Tooltip text="Generar enlace de registro para nuevos usuarios">
-                  <button type="button" onClick={handleGenerateInvite} disabled={inviteLoading} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition inline-flex items-center gap-2"><UserPlus size={16} /> {inviteLoading ? 'Generando...' : 'Crear usuario'}</button>
-                </Tooltip>
               </div>
               
               <div className="flex flex-wrap items-center gap-3 mb-4 bg-green-50 p-3 rounded-lg border border-green-200">
@@ -665,16 +642,6 @@ export default function Admin() {
                   <button type="button" onClick={() => { setShowFastUserModal(true); setFastUserCode(null); setFastUserName(''); setFastUserWhatsapp(''); setFastUserEmail(''); }} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition inline-flex items-center gap-2"><UserPlus size={16} /> Crear Usuario Rápido</button>
                 </Tooltip>
               </div>
-
-              {inviteUrl && (
-                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-3">
-                  <Link2 size={18} className="text-blue-600 shrink-0" />
-                  <span className="text-sm text-blue-800 break-all flex-1">{inviteUrl}</span>
-                  <Tooltip text="Copiar enlace">
-                    <button type="button" onClick={handleCopyInvite} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition inline-flex items-center gap-1 shrink-0"><Copy size={14} /> {copied ? 'Copiado' : 'Copiar'}</button>
-                  </Tooltip>
-                </div>
-              )}
 
               {loading ? <p className="text-gray-500">Cargando...</p> : (
                 <>
