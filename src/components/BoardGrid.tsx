@@ -47,8 +47,8 @@ export default function BoardGrid({ tickets, currentUserId, onSelectNumber, load
   };
 
   return (
-    <div className="overflow-x-auto pb-2">
-      <div className="grid grid-cols-10 gap-2 min-w-[500px]">
+    <div className="pb-2 w-full">
+      <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-1.5 sm:gap-2">
       {tickets.map((ticket) => {
         const button = (
           <button
