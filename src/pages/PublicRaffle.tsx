@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { Loader, Target, Eye, LogIn, Gift, X } from 'lucide-react';
+import { Loader, Target, Eye, LogIn, Gift, X, Lock } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import api from '../lib/api';
 import { getEcho } from '../lib/echo';
@@ -114,17 +114,13 @@ export default function PublicRaffle() {
         <h1 className="text-white text-3xl font-black italic truncate">JuegaNet</h1>
       </div>
 
-      {isFinished && (
-        <div className="mb-6 bg-red-600 border border-red-400 text-white p-4 rounded-xl shadow-lg flex items-center justify-center font-bold text-lg text-center animate-pulse">
-          ¡ESTE SORTEO YA FINALIZÓ!
-        </div>
-      )}
-
       <div className="mb-6">
         {isFinished ? (
-          <div className="bg-black/40 backdrop-blur-md rounded-xl p-6 text-center shadow-lg border border-white/10">
-            <h2 className="text-white font-bold text-2xl truncate mb-2">{raffle.name}</h2>
-            <p className="text-white/80 font-semibold uppercase tracking-widest text-sm">Sorteo Cerrado</p>
+          <div className="bg-black/40 backdrop-blur-md rounded-xl p-6 text-center shadow-lg border border-white/10 flex flex-col items-center">
+            <h2 className="text-white font-bold text-2xl truncate mb-3">{raffle.name}</h2>
+            <p className="text-red-400 font-bold uppercase tracking-widest text-sm inline-flex items-center gap-1.5 border border-red-500/30 bg-red-500/10 px-4 py-1.5 rounded-full">
+              <Lock size={16} /> SORTEO CERRADO
+            </p>
           </div>
         ) : (
           <SuperCountdown startTime={raffle.start_time} endTime={raffle.end_time} title={raffle.name} />
