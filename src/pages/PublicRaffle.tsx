@@ -128,14 +128,18 @@ export default function PublicRaffle() {
       </div>
 
       <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 md:p-6 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-white text-xl font-bold inline-flex items-center gap-2">
-            <Target size={20} /> Tablero de números
-            <span className="text-sm font-normal text-white/80 ml-2 bg-black/20 px-2 py-1 rounded-full"><Eye size={14} className="inline mr-1" /> Modo Observador Público</span>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+          <h2 className="text-white text-lg sm:text-xl font-bold flex flex-row flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5">
+              <Target size={18} className="sm:w-5 sm:h-5" /> Tablero
+            </span>
+            <span className="inline-flex items-center text-xs sm:text-sm font-normal text-white/80 bg-black/20 px-2 py-0.5 sm:py-1 rounded-full whitespace-nowrap">
+              <Eye size={12} className="mr-1 sm:w-3.5 sm:h-3.5" /> Público
+            </span>
           </h2>
           {raffle.prizes && raffle.prizes.length > 0 && (
-            <button onClick={() => setShowPrizes(true)} className="inline-flex items-center gap-1 text-sm font-bold text-yellow-300 hover:text-yellow-100 transition-colors uppercase">
-              <Gift size={16} /> Ver premios
+            <button onClick={() => setShowPrizes(true)} className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-yellow-300 hover:text-yellow-100 transition-colors uppercase self-start md:self-auto bg-black/20 px-3 py-1.5 rounded-lg">
+              <Gift size={14} className="sm:w-4 sm:h-4" /> Ver premios
             </button>
           )}
         </div>
