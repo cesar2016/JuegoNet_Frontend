@@ -80,8 +80,11 @@ export default function Admin() {
   const [inviteLoading, setInviteLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [fastUserName, setFastUserName] = useState('');
+  const [fastUserWhatsapp, setFastUserWhatsapp] = useState('');
+  const [fastUserEmail, setFastUserEmail] = useState('');
   const [fastUserCode, setFastUserCode] = useState<string | null>(null);
   const [fastUserLoading, setFastUserLoading] = useState(false);
+  const [showFastUserModal, setShowFastUserModal] = useState(false);
   const [formError, setFormError] = useState('');
   const allOrdersRef = useRef(allOrders);
   const fetchDataRef = useRef<() => void>(() => {});
@@ -488,9 +491,12 @@ export default function Admin() {
     if (!fastUserName.trim()) return;
     setFastUserLoading(true);
     try {
-      const res = await api.post<{ login_code: string; message: string }>('/admin/fast-users', { name: fastUserName });
+      const payload: any = { name: fastUserName };
+      if (fastUserWhatsapp.trim()) payload.whatsapp = fastUserWhatsapp;
+      if (fastUserEmail.trim()) payload.email = fastUserEmail;
+      
+      const res = await api.post<{ login_code: string; message: string }>('/admin/fast-users', payload);
       setFastUserCode(res.login_code);
-      setFastUserName('');
       toast.success(res.message);
       fetchData();
     } catch (err: unknown) {
@@ -655,21 +661,9 @@ export default function Admin() {
               </div>
               
               <div className="flex flex-wrap items-center gap-3 mb-4 bg-green-50 p-3 rounded-lg border border-green-200">
-                <form onSubmit={handleCreateFastUser} className="flex items-center gap-2 w-full sm:w-auto">
-                  <input type="text" value={fastUserName} onChange={(e) => setFastUserName(e.target.value)} placeholder="Nombre del jugador..." className="px-3 py-2 rounded-lg border border-green-300 outline-none flex-1 sm:w-64" required />
-                  <Tooltip text="Crear un usuario rápido con solo nombre para que apueste con código">
-                    <button type="submit" disabled={fastUserLoading} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition disabled:opacity-50 min-w-fit">{fastUserLoading ? 'Creando...' : 'Crear Usuario Rápido'}</button>
-                  </Tooltip>
-                </form>
-                {fastUserCode && (
-                  <div className="flex items-center gap-2 ml-auto">
-                    <span className="text-sm font-semibold text-green-800">Cód. Acceso:</span>
-                    <span className="bg-white px-3 py-1 rounded font-mono font-bold text-lg tracking-wider text-green-700 border border-green-300">{fastUserCode}</span>
-                    <Tooltip text="Copiar código">
-                      <button type="button" onClick={() => { navigator.clipboard.writeText(fastUserCode); toast.success('Código copiado'); }} className="bg-green-600 text-white p-1.5 rounded hover:bg-green-700 transition"><Copy size={16} /></button>
-                    </Tooltip>
-                  </div>
-                )}
+                <Tooltip text="Abre un formulario para crear un usuario rápidamente">
+                  <button type="button" onClick={() => { setShowFastUserModal(true); setFastUserCode(null); setFastUserName(''); setFastUserWhatsapp(''); setFastUserEmail(''); }} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition inline-flex items-center gap-2"><UserPlus size={16} /> Crear Usuario Rápido</button>
+                </Tooltip>
               </div>
 
               {inviteUrl && (
@@ -1091,6 +1085,59 @@ export default function Admin() {
         message="¿Estás seguro de que querés eliminar este sorteo? Esta acción no se puede deshacer y se borrarán todos sus datos (tickets, órdenes, resultados)."
         loading={deleteLoading}
       />
+      
+      {showFastUserModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 overflow-y-auto" onClick={() => !fastUserLoading && setShowFastUserModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md relative my-8" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setShowFastUserModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10 transition">
+              <X size={24} />
+            </button>
+            <h2 className="text-xl font-bold text-gray-800 mb-6 pr-8">Crear Usuario Rápido</h2>
+            
+            {fastUserCode ? (
+              <div className="text-center py-6">
+                <div className="mb-4 inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 text-green-600">
+                  <Check size={32} />
+                </div>
+                <h3 className="text-lg font-bold text-gray-800 mb-2">¡Usuario Creado!</h3>
+                <p className="text-sm text-gray-600 mb-4">El jugador ya puede iniciar sesión con este código:</p>
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
+                  <span className="font-mono font-bold text-3xl tracking-widest text-green-700">{fastUserCode}</span>
+                </div>
+                <button 
+                  type="button" 
+                  onClick={() => { navigator.clipboard.writeText(fastUserCode); toast.success('Código copiado al portapapeles'); setShowFastUserModal(false); }} 
+                  className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition flex justify-center items-center gap-2"
+                >
+                  <Copy size={20} /> Copiar código y cerrar
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleCreateFastUser} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Nombre Completo <span className="text-red-500">*</span></label>
+                  <input type="text" value={fastUserName} onChange={e => setFastUserName(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500" placeholder="Ej: Juan Pérez" required autoFocus />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Teléfono <span className="text-gray-400 font-normal text-xs">(Opcional)</span></label>
+                  <input type="tel" value={fastUserWhatsapp} onChange={e => setFastUserWhatsapp(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500" placeholder="Ej: +541112345678" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Email <span className="text-gray-400 font-normal text-xs">(Opcional)</span></label>
+                  <input type="email" value={fastUserEmail} onChange={e => setFastUserEmail(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500" placeholder="Ej: juan@email.com" />
+                </div>
+                <div className="pt-4 border-t border-gray-100 flex justify-end gap-3">
+                  <button type="button" onClick={() => setShowFastUserModal(false)} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold transition">Cancelar</button>
+                  <button type="submit" disabled={fastUserLoading} className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition disabled:opacity-50 inline-flex items-center gap-2">
+                    {fastUserLoading ? 'Creando...' : <><UserPlus size={18} /> Crear Usuario</>}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
       </main>
     </div>
