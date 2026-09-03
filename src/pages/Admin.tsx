@@ -316,9 +316,6 @@ export default function Admin() {
 
   useEffect(() => {
     if (activeTab !== 'users') return;
-    api.get<{ url: string | null }>('/admin/invite/latest').then(res => {
-      if (res.url) setInviteUrl(res.url);
-    }).catch(() => {});
     fetchData();
   }, [activeTab, userPage, userPerPage, userSearch, userStatusFilter, userDateFrom, userDateTo]);
 
