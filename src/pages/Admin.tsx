@@ -12,7 +12,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { Settings, Users, FileText, Dice5, Search, Check, X, Clock, ArrowLeft, Trophy, PenLine, Trash2, Pencil as PencilIcon, Eye, ShoppingCart, Link2, Copy, UserPlus } from 'lucide-react';
 
-interface AllUser { id: number; name: string; email: string; whatsapp: string | null; status: string; role: string; created_at: string; email_verified_at: string | null; avatar: string | null; admin: { id: number; name: string } | null; }
+interface AllUser { id: number; name: string; email: string; whatsapp: string | null; login_code: string | null; status: string; role: string; created_at: string; email_verified_at: string | null; avatar: string | null; admin: { id: number; name: string } | null; }
 interface AdminStat { id: number; name: string; email: string; role: string; last_login_at: string | null; managed_users_count: number; active_raffles_count: number; closed_raffles_count: number; }
 interface PaginatedAdminStats { data: AdminStat[]; current_page: number; last_page: number; per_page: number; total: number; from: number | null; to: number | null; }
 interface PaginatedUsers { data: AllUser[]; current_page: number; last_page: number; per_page: number; total: number; from: number | null; to: number | null; }
@@ -699,7 +699,16 @@ export default function Admin() {
                                   {!u.email_verified_at && <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded ml-1">sin verificar</span>}
                                 </p>
                                 <p className="text-sm text-gray-500">{u.email}{u.whatsapp ? ` · ${u.whatsapp}` : ''}</p>
-                                <p className="text-xs text-gray-400">Registrado: {new Date(u.created_at).toLocaleDateString('es-AR')}{u.role === 'user' && u.admin ? ` · Admin: ${u.admin.name}` : ''}</p>
+                                {u.login_code && (
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-xs text-gray-500">Cód:</span>
+                                    <span className="text-xs font-mono font-bold text-gray-700 bg-gray-200 px-1.5 py-0.5 rounded">{u.login_code}</span>
+                                    <Tooltip text="Copiar código">
+                                      <button onClick={() => { navigator.clipboard.writeText(u.login_code!); toast.success('Código copiado'); }} className="text-gray-400 hover:text-green-600 transition"><Copy size={12} /></button>
+                                    </Tooltip>
+                                  </div>
+                                )}
+                                <p className="text-xs text-gray-400 mt-1">Registrado: {new Date(u.created_at).toLocaleDateString('es-AR')}{u.role === 'user' && u.admin ? ` · Admin: ${u.admin.name}` : ''}</p>
                               </div>
                             </div>
                             <div className="flex items-center gap-3 shrink-0">
