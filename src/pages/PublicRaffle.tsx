@@ -8,7 +8,7 @@ import SuperCountdown from '../components/SuperCountdown';
 import BoardGrid from '../components/BoardGrid';
 import Modal from '../components/Modal';
 
-interface Raffle { id: number; name: string; start_time: string; end_time: string; ticket_price: string; max_number?: number; prizes?: { description: string }[]; }
+interface Raffle { id: number; name: string; start_time: string; end_time: string; ticket_price: string; max_number?: number; admin_id?: number | null; prizes?: { description: string }[]; }
 interface Ticket { id: number; number: number; status: string; user_id: number | null; user: { name: string; avatar: string | null } | null; }
 
 export default function PublicRaffle() {
@@ -23,7 +23,7 @@ export default function PublicRaffle() {
   const [loginCode, setLoginCodeInput] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
-  const { loginCode: authLoginCode } = useAuth();
+  const { loginCode: authLoginCode, logout } = useAuth();
 
   useEffect(() => {
     const fetchBoard = async () => {
@@ -67,7 +67,12 @@ export default function PublicRaffle() {
     setLoginError('');
     setLoginLoading(true);
     try {
-      await authLoginCode(loginCode);
+      const user = await authLoginCode(loginCode);
+      if (user.role === 'user' && user.admin_id && raffle?.admin_id && user.admin_id !== raffle.admin_id) {
+        logout();
+        setLoginError('Este código pertenece a otro evento u organizador. No puedes jugar aquí.');
+        return;
+      }
       navigate(`/dashboard?raffle=${raffle?.id}`);
     } catch (err: unknown) {
       const apiErr = err as { data?: { message?: string } };
