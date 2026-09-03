@@ -58,6 +58,7 @@ export default function Admin() {
   const [winners, setWinners] = useState<Winner[] | null>(null);
   const [winningInputs, setWinningInputs] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCreatingRaffle, setIsCreatingRaffle] = useState(false);
 
   const [editRaffle, setEditRaffle] = useState<Raffle | null>(null);
   const [deleteRaffleId, setDeleteRaffleId] = useState<number | null>(null);
@@ -419,7 +420,9 @@ export default function Admin() {
 
   const handleCreateRaffle = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isCreatingRaffle) return;
     setFormError('');
+    setIsCreatingRaffle(true);
     try {
       await api.post('/raffles', { ...raffleForm, prizes: raffleForm.prizes.map(p => ({ description: p })) });
       toast.success('Sorteo creado correctamente.');
@@ -433,6 +436,8 @@ export default function Admin() {
       } else {
         toast.error(msg);
       }
+    } finally {
+      setIsCreatingRaffle(false);
     }
   };
 
@@ -1008,7 +1013,7 @@ export default function Admin() {
                         </div>
                       ))}
                     </div>
-                    <Tooltip text="Crear un nuevo sorteo con los datos ingresados"><button type="submit" className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg transition inline-flex items-center gap-2"><PenLine size={18} /> Crear sorteo</button></Tooltip>
+                    <Tooltip text="Crear un nuevo sorteo con los datos ingresados"><button type="submit" disabled={isCreatingRaffle} className={`bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg transition inline-flex items-center gap-2 ${isCreatingRaffle ? 'opacity-70 cursor-not-allowed' : ''}`}><PenLine size={18} /> {isCreatingRaffle ? 'Creando...' : 'Crear sorteo'}</button></Tooltip>
                   </form>}
 
                   {loading ? <p className="text-gray-500">Cargando...</p> : (
