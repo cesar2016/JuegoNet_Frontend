@@ -79,6 +79,9 @@ export default function Admin() {
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [inviteLoading, setInviteLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [fastUserName, setFastUserName] = useState('');
+  const [fastUserCode, setFastUserCode] = useState<string | null>(null);
+  const [fastUserLoading, setFastUserLoading] = useState(false);
   const [formError, setFormError] = useState('');
   const allOrdersRef = useRef(allOrders);
   const fetchDataRef = useRef<() => void>(() => {});
@@ -480,6 +483,24 @@ export default function Admin() {
     setEditRaffle(null);
   };
 
+  const handleCreateFastUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fastUserName.trim()) return;
+    setFastUserLoading(true);
+    try {
+      const res = await api.post<{ login_code: string; message: string }>('/admin/fast-users', { name: fastUserName });
+      setFastUserCode(res.login_code);
+      setFastUserName('');
+      toast.success(res.message);
+      fetchData();
+    } catch (err: unknown) {
+      const apiErr = err as { data?: { message?: string } };
+      toast.error(apiErr.data?.message || 'Error al crear usuario.');
+    } finally {
+      setFastUserLoading(false);
+    }
+  };
+
   const handleConfirmDeleteRaffle = async () => {
     if (!deleteRaffleId) return;
     setDeleteLoading(true);
@@ -632,6 +653,25 @@ export default function Admin() {
                   <button type="button" onClick={handleGenerateInvite} disabled={inviteLoading} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition inline-flex items-center gap-2"><UserPlus size={16} /> {inviteLoading ? 'Generando...' : 'Crear usuario'}</button>
                 </Tooltip>
               </div>
+              
+              <div className="flex flex-wrap items-center gap-3 mb-4 bg-green-50 p-3 rounded-lg border border-green-200">
+                <form onSubmit={handleCreateFastUser} className="flex items-center gap-2 w-full sm:w-auto">
+                  <input type="text" value={fastUserName} onChange={(e) => setFastUserName(e.target.value)} placeholder="Nombre del jugador..." className="px-3 py-2 rounded-lg border border-green-300 outline-none flex-1 sm:w-64" required />
+                  <Tooltip text="Crear un usuario rápido con solo nombre para que apueste con código">
+                    <button type="submit" disabled={fastUserLoading} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition disabled:opacity-50 min-w-fit">{fastUserLoading ? 'Creando...' : 'Crear Usuario Rápido'}</button>
+                  </Tooltip>
+                </form>
+                {fastUserCode && (
+                  <div className="flex items-center gap-2 ml-auto">
+                    <span className="text-sm font-semibold text-green-800">Cód. Acceso:</span>
+                    <span className="bg-white px-3 py-1 rounded font-mono font-bold text-lg tracking-wider text-green-700 border border-green-300">{fastUserCode}</span>
+                    <Tooltip text="Copiar código">
+                      <button type="button" onClick={() => { navigator.clipboard.writeText(fastUserCode); toast.success('Código copiado'); }} className="bg-green-600 text-white p-1.5 rounded hover:bg-green-700 transition"><Copy size={16} /></button>
+                    </Tooltip>
+                  </div>
+                )}
+              </div>
+
               {inviteUrl && (
                 <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-3">
                   <Link2 size={18} className="text-blue-600 shrink-0" />
