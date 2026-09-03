@@ -1,6 +1,7 @@
 import { avatarUrl } from '../lib/avatar';
 import Tooltip from './Tooltip';
 import { ShoppingCart, Clock } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 interface TicketUser {
   name: string;
@@ -51,8 +52,20 @@ export default function BoardGrid({ tickets, currentUserId, onSelectNumber, load
       {tickets.map((ticket) => {
         const button = (
           <button
-            onClick={() => onSelectNumber(ticket.number)}
-            disabled={readOnly || loading || ticket.status !== 'available'}
+            onClick={() => {
+              if (loading) return;
+              if (ticket.status === 'sold') {
+                toast.info(`El número ${ticket.number} ya fue COMPRADO por ${ticket.user?.name || 'otro jugador'}.`);
+                return;
+              }
+              if (ticket.status === 'pending_admin' || ticket.status === 'in_cart') {
+                toast.info(`El número ${ticket.number} está RESERVADO por ${ticket.user?.name || 'otro jugador'} y pendiente de pago.`);
+                return;
+              }
+              if (readOnly) return;
+              onSelectNumber(ticket.number);
+            }}
+            disabled={loading}
             className={`
               relative aspect-square rounded-lg border-2 font-bold
               transition-all duration-200 flex flex-col items-center justify-center

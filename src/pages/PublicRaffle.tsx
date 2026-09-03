@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { Loader, Target, Eye, LogIn, Gift, X } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import api from '../lib/api';
@@ -199,6 +201,7 @@ export default function PublicRaffle() {
           </div>
         )}
 
+      <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
 }
