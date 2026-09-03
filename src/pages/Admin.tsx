@@ -137,7 +137,7 @@ export default function Admin() {
 
     // Subscribe to all active raffle channels to receive TicketStatusChanged
     api.get<{ id: number }[]>('/raffles').then(raffles => {
-      raffles.forEach(r => echo.private(`raffle.${r.id}`));
+      raffles.forEach(r => echo.channel(`raffle.${r.id}`));
     }).catch(() => {});
 
     const handler = (eventName: string, data: { id: number; raffle_id: number; number: number; status: string; user_id: number | null; order_id: number | null }) => {
@@ -1020,6 +1020,7 @@ export default function Admin() {
                             )}
                           </div>
                           <div className="flex flex-wrap gap-2">
+                            <Tooltip text="Copiar enlace público del tablero"><button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/s/${r.id}`); toast.success('Enlace público copiado al portapapeles'); }} className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-semibold transition inline-flex items-center gap-1"><Link2 size={16} /> Compartir Público</button></Tooltip>
                             <Tooltip text="Ver participantes"><button onClick={() => handleViewParticipants(r)} className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-lg transition inline-flex items-center justify-center"><Eye size={16} /></button></Tooltip>
                             {r.can_edit && user?.role !== 'super_admin' && (
                               <>

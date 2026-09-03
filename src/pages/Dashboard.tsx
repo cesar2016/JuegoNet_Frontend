@@ -97,7 +97,7 @@ export default function Dashboard() {
     const currentRaffleId = selectedRaffle.id;
 
     // Ensure subscription (Echo deduplicates)
-    echo.private(`raffle.${currentRaffleId}`);
+    echo.channel(`raffle.${currentRaffleId}`);
 
     const handler = (eventName: string, data: { id: number; raffle_id: number; number: number; status: string; user_id: number | null; user: { name: string; avatar: string | null } | null }) => {
       if (eventName !== 'TicketStatusChanged' || data.raffle_id !== currentRaffleId) return;

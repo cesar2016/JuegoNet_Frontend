@@ -9,6 +9,7 @@ import Profile from './pages/Profile';
 import VerifyEmail from './pages/VerifyEmail';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import PublicRaffle from './pages/PublicRaffle';
 
 function App() {
   const { user, loading } = useAuth();
@@ -36,6 +37,7 @@ function App() {
         <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/" />} />
         <Route path="/admin" element={user && (user.role === 'super_admin' || user.role === 'admin') ? <Admin /> : <Navigate to="/" />} />
         <Route path="/profile" element={user ? <Profile /> : <Navigate to="/" />} />
+        <Route path="/s/:id" element={<PublicRaffle />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </div>
