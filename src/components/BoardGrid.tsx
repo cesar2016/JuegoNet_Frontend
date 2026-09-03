@@ -55,11 +55,19 @@ export default function BoardGrid({ tickets, currentUserId, onSelectNumber, load
             onClick={() => {
               if (loading) return;
               if (ticket.status === 'sold') {
-                toast.info(`El número ${ticket.number} ya fue COMPRADO por ${ticket.user?.name || 'otro jugador'}.`);
+                if (ticket.user_id && currentUserId && ticket.user_id === currentUserId) {
+                  toast.success(`¡Este número es tuyo! Ya está aprobado.`);
+                } else {
+                  toast.info(`El número ${ticket.number} ya fue COMPRADO por ${ticket.user?.name || 'otro jugador'}.`);
+                }
                 return;
               }
               if (ticket.status === 'pending_admin' || ticket.status === 'in_cart') {
-                toast.info(`El número ${ticket.number} está RESERVADO por ${ticket.user?.name || 'otro jugador'} y pendiente de pago.`);
+                if (ticket.user_id && currentUserId && ticket.user_id === currentUserId) {
+                  toast.info(`Este número lo elegiste vos y está pendiente de aprobación.`);
+                } else {
+                  toast.info(`El número ${ticket.number} está RESERVADO por ${ticket.user?.name || 'otro jugador'} y pendiente de pago.`);
+                }
                 return;
               }
               if (readOnly) return;
