@@ -493,7 +493,7 @@ export default function Admin() {
     if (!deleteRaffleId) return;
     setDeleteLoading(true);
     try {
-      await api.delete(`/admin/raffles/${deleteRaffleId}`);
+      await api.delete(`/raffles/${deleteRaffleId}`);
       toast.success('Sorteo eliminado.');
       setDeleteRaffleId(null);
       fetchData();
