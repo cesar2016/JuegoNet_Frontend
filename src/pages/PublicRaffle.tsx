@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Loader, Target, Eye, LogIn, Gift } from 'lucide-react';
+import { Loader, Target, Eye, LogIn, Gift, X } from 'lucide-react';
+import { useAuth } from '../lib/AuthContext';
 import api from '../lib/api';
 import { getEcho } from '../lib/echo';
 import SuperCountdown from '../components/SuperCountdown';
@@ -18,6 +19,11 @@ export default function PublicRaffle() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showPrizes, setShowPrizes] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginCode, setLoginCodeInput] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  const { loginCode: authLoginCode } = useAuth();
 
   useEffect(() => {
     const fetchBoard = async () => {
@@ -53,9 +59,21 @@ export default function PublicRaffle() {
   }, [raffle]);
 
   const handleSelectNumber = () => {
-    // Alerta que debe iniciar sesión
-    if (window.confirm('Debes iniciar sesión para elegir un número. ¿Ir a iniciar sesión?')) {
-      navigate(`/?redirect=/dashboard?raffle=${id}`);
+    setShowLoginModal(true);
+  };
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError('');
+    setLoginLoading(true);
+    try {
+      await authLoginCode(loginCode);
+      navigate(`/dashboard?raffle=${raffle?.id}`);
+    } catch (err: unknown) {
+      const apiErr = err as { data?: { message?: string } };
+      setLoginError(apiErr.data?.message || 'Código inválido.');
+    } finally {
+      setLoginLoading(false);
     }
   };
 
@@ -84,12 +102,6 @@ export default function PublicRaffle() {
     <div className="min-h-screen py-6 px-4 max-w-5xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-white text-3xl font-black italic truncate">JuegaNet</h1>
-        <button 
-          onClick={() => navigate(`/?redirect=/dashboard?raffle=${id}`)}
-          className="bg-white text-green-700 px-4 py-2 rounded-lg font-bold shadow hover:bg-gray-100 flex items-center gap-2"
-        >
-          <LogIn size={18} /> Iniciar Sesión para Jugar
-        </button>
       </div>
 
       <div className="mb-6"><SuperCountdown startTime={raffle.start_time} endTime={raffle.end_time} title={raffle.name} /></div>
@@ -136,6 +148,34 @@ export default function PublicRaffle() {
             )}
           </div>
         </Modal>
+
+        {showLoginModal && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 overflow-y-auto" onClick={() => !loginLoading && setShowLoginModal(false)}>
+            <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm relative my-8" onClick={e => e.stopPropagation()}>
+              <button onClick={() => setShowLoginModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10 transition">
+                <X size={24} />
+              </button>
+              <h2 className="text-xl font-bold text-gray-800 mb-6 pr-8">Ingresar para Jugar</h2>
+              
+              {loginError && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">{loginError}</div>}
+              
+              <form onSubmit={handleLoginSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Código de Acceso (6 caracteres)</label>
+                  <input type="text" value={loginCode} onChange={e => setLoginCodeInput(e.target.value.toUpperCase())} className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 font-mono text-center tracking-widest text-xl uppercase" placeholder="AAAAAA" maxLength={6} required autoFocus />
+                </div>
+                
+                <button type="submit" disabled={loginLoading} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition flex justify-center items-center gap-2 disabled:opacity-50 mt-4">
+                  {loginLoading ? 'Ingresando...' : <><LogIn size={20} /> Ingresar y Jugar</>}
+                </button>
+                <div className="text-center mt-3">
+                  <span className="text-xs text-gray-500">¿Tienes un usuario con email? <button type="button" onClick={() => navigate(`/?redirect=/dashboard?raffle=${raffle?.id}`)} className="text-green-600 hover:underline">Iniciar sesión normal</button></span>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
     </div>
   );
 }
