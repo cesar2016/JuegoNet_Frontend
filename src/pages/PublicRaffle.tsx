@@ -111,7 +111,7 @@ export default function PublicRaffle() {
   return (
     <div className="min-h-screen py-6 px-4 max-w-5xl mx-auto">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-white text-3xl font-black italic truncate">JuegaNet</h1>
+        <img src="/logo.png" alt="JuegaNet" className="h-12 w-auto" />
       </div>
 
       <div className="mb-6">
