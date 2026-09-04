@@ -424,7 +424,7 @@ export default function Admin() {
   const handleGenerateInvite = async () => {
     setInviteLoading(true);
     try {
-      const res = await api.post<{ register_url: string }>('/admin/invites');
+      const res = await api.post<{ register_url: string }>('/admin/invite');
       setInviteUrl(res.register_url);
       setCopied(false);
       toast.success('Enlace de invitación generado');
