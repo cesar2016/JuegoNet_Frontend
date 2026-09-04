@@ -77,6 +77,9 @@ export default function Admin() {
   const [adminStatDateFrom, setAdminStatDateFrom] = useState('');
   const [adminStatDateTo, setAdminStatDateTo] = useState('');
   const [viewAdminStats, setViewAdminStats] = useState(false);
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const [fastUserName, setFastUserName] = useState('');
   const [fastUserWhatsapp, setFastUserWhatsapp] = useState('');
@@ -418,6 +421,19 @@ export default function Admin() {
     }
   };
 
+  const handleGenerateInvite = async () => {
+    setInviteLoading(true);
+    try {
+      const res = await api.post<{ register_url: string }>('/admin/invites');
+      setInviteUrl(res.register_url);
+      setCopied(false);
+      toast.success('Enlace de invitación generado');
+    } catch {
+      toast.error('Error al generar enlace');
+    }
+    setInviteLoading(false);
+  };
+
   const handleCreateRaffle = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isCreatingRaffle) return;
@@ -644,6 +660,25 @@ export default function Admin() {
                   <button type="button" onClick={() => { setShowFastUserModal(true); setFastUserCode(null); setFastUserName(''); setFastUserWhatsapp(''); setFastUserEmail(''); }} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition inline-flex items-center gap-2"><UserPlus size={16} /> Crear Usuario Rápido</button>
                 </Tooltip>
               </div>
+
+              {user?.role === 'super_admin' && (
+                <>
+                  <div className="flex border-b border-gray-100 pb-4 mb-4">
+                    <Tooltip text="Generar un enlace temporal para que un usuario se registre">
+                      <button type="button" onClick={handleGenerateInvite} disabled={inviteLoading} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition inline-flex items-center gap-2"><UserPlus size={16} /> {inviteLoading ? 'Generando...' : 'Crear usuario por enlace'}</button>
+                    </Tooltip>
+                  </div>
+                  {inviteUrl && (
+                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-3">
+                      <Link2 size={18} className="text-blue-600 shrink-0" />
+                      <div className="flex-1 truncate text-blue-800 text-sm font-semibold">{inviteUrl}</div>
+                      <Tooltip text={copied ? 'Copiado!' : 'Copiar al portapapeles'}>
+                        <button type="button" onClick={() => { navigator.clipboard.writeText(inviteUrl); setCopied(true); toast.success('Copiado al portapapeles'); }} className="bg-white text-blue-600 p-2 rounded hover:bg-blue-50 transition border border-blue-200"><Copy size={16} /></button>
+                      </Tooltip>
+                    </div>
+                  )}
+                </>
+              )}
 
               {loading ? <p className="text-gray-500">Cargando...</p> : (
                 <>
