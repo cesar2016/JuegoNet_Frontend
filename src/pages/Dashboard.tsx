@@ -290,14 +290,16 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 gap-6 relative">
               <div className="col-span-1">
                 <div className="bg-white/10 backdrop-blur-md rounded-xl p-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-                    <h2 className="text-white text-xl font-bold flex items-center flex-wrap gap-2">
+                  <div className="flex flex-col sm:flex-row items-center gap-4 mb-4 relative">
+                    <h2 className="flex-shrink-0 z-10 text-white text-xl font-bold flex items-center flex-wrap gap-2">
                       {selectedRaffle ? <span className="inline-flex items-center gap-2">{selectedRaffle.name}{selectedRaffle.prizes && selectedRaffle.prizes.length > 0 && <button onClick={() => setShowPrizes(true)} className="inline-flex items-center gap-1 text-sm font-normal text-yellow-300 hover:text-yellow-100 transition-colors underline decoration-yellow-300/40 hover:decoration-yellow-100/60"><Gift size={16} /> Ver premios</button>}</span> : <span className="inline-flex items-center gap-2"><Target size={20} /> Tablero de números</span>}{isAdmin && <span className="text-sm font-normal text-white/60 ml-2">· <Eye size={16} className="inline" /> Modo visita</span>}
                     </h2>
                     {selectedRaffle?.admin?.whatsapp && (
-                      <a href={`https://wa.me/${selectedRaffle.admin.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 bg-green-500 hover:bg-green-400 text-white text-sm font-bold py-2 px-4 rounded-xl transition-colors shadow-sm whitespace-nowrap w-full sm:w-auto h-fit">
-                        <MessageCircle size={18} fill="currentColor" className="text-white" /> WhatsApp Admin
-                      </a>
+                      <div className="flex-grow flex sm:absolute sm:inset-x-0 sm:justify-center justify-center w-full pointer-events-none">
+                        <a href={`https://wa.me/${selectedRaffle.admin.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="pointer-events-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white text-base sm:text-lg font-bold py-2 px-6 rounded-full transition-all duration-300 shadow-[0_0_20px_rgba(34,197,94,0.6)] border border-green-400/50 hover:shadow-[0_0_30px_rgba(34,197,94,0.9)] hover:-translate-y-0.5 whitespace-nowrap group">
+                          <MessageCircle size={22} fill="currentColor" className="text-green-100 group-hover:text-white transition-colors drop-shadow-md" /> {selectedRaffle.admin.whatsapp}
+                        </a>
+                      </div>
                     )}
                   </div>
                   
