@@ -286,10 +286,18 @@ export default function Dashboard() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              <div className="lg:col-span-3">
+            <div className="grid grid-cols-1 gap-6 relative">
+              <div className="col-span-1">
                 <div className="bg-white/10 backdrop-blur-md rounded-xl p-4">
                   <h2 className="text-white text-xl font-bold mb-4">{selectedRaffle ? <span className="inline-flex items-center gap-2">{selectedRaffle.name}{selectedRaffle.prizes && selectedRaffle.prizes.length > 0 && <button onClick={() => setShowPrizes(true)} className="inline-flex items-center gap-1 text-sm font-normal text-yellow-300 hover:text-yellow-100 transition-colors underline decoration-yellow-300/40 hover:decoration-yellow-100/60"><Gift size={16} /> Ver premios</button>}</span> : <span className="inline-flex items-center gap-2"><Target size={20} /> Tablero de números</span>}{isAdmin && <span className="text-sm font-normal text-white/60 ml-2">· <Eye size={16} className="inline" /> Modo visita</span>}</h2>
+                  
+                  {isAdmin && (
+                    <div className="bg-white/20 border border-white/30 rounded-lg p-3 mb-4 text-white flex items-center gap-2">
+                       <Eye size={18} />
+                       <span className="text-sm">Estás viendo el tablero como administrador. No podés comprar números.</span>
+                    </div>
+                  )}
+
                   {loading && tickets.length === 0 ? (
                     <div className="text-white/60 text-center py-12 inline-flex items-center gap-2"><Loader size={20} className="animate-spin" /> Cargando números...</div>
                   ) : (
@@ -297,16 +305,10 @@ export default function Dashboard() {
                   )}
                 </div>
               </div>
-              <div className="lg:col-span-1">
-                {isAdmin ? (
-                  <div className="bg-white rounded-xl shadow-lg p-6">
-                    <h2 className="text-xl font-bold text-gray-800 mb-4 inline-flex items-center gap-2"><Eye size={22} /> Modo visita</h2>
-                    <p className="text-gray-500 text-sm">Estás viendo el tablero como administrador. No podés comprar números.</p>
-                  </div>
-                ) : (
-                  <Cart cart={cart} pendingOrder={pendingOrder} remainingSeconds={remainingSeconds} onRemove={handleRemoveTicket} onConfirm={handleConfirm} onExpire={handleCartExpire} loading={loading} />
-                )}
-              </div>
+              
+              {!isAdmin && (
+                <Cart cart={cart} pendingOrder={pendingOrder} remainingSeconds={remainingSeconds} onRemove={handleRemoveTicket} onConfirm={handleConfirm} onExpire={handleCartExpire} loading={loading} />
+              )}
             </div>
           </>
         ) : (
