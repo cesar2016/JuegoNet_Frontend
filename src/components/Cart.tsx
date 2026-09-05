@@ -79,11 +79,6 @@ export default function Cart({ cart, pendingOrder, remainingSeconds, onRemove, o
   const [cartEndTime, setCartEndTime] = useState(() => Date.now() + remainingSeconds * 1000);
   
   const [isOpen, setIsOpen] = useState(false);
-
-  const handleExpireProxy = () => {
-    setIsOpen(false);
-    onExpire();
-  };
   const bubbleRef = useRef<HTMLDivElement>(null);
   const pos = useRef({ x: window.innerWidth - 80, y: window.innerHeight - 100 });
   const isDragging = useRef(false);
@@ -141,11 +136,30 @@ export default function Cart({ cart, pendingOrder, remainingSeconds, onRemove, o
     if (!isDragging.current) setIsOpen(true);
   };
 
-  // Open if items get added from outside
   useEffect(() => {
     if (cart && cart.tickets.length > 0) setIsOpen(true);
     if (pendingOrder) setIsOpen(true);
   }, [cart?.tickets.length, pendingOrder?.id]);
+
+  // Background timer to ensure cart expires even if the modal is closed and unmounted
+  useEffect(() => {
+    if (!cart || cart.tickets.length === 0) return;
+    
+    const checkExpiration = () => {
+      if (Date.now() >= cartEndTime) {
+        setIsOpen(false);
+        onExpire();
+      }
+    };
+
+    if (Date.now() >= cartEndTime) {
+       checkExpiration();
+       return;
+    }
+
+    const id = setInterval(checkExpiration, 1000);
+    return () => clearInterval(id);
+  }, [cartEndTime, cart?.tickets.length, onExpire]);
 
   const itemCount = pendingOrder ? pendingOrder.tickets.length : (cart ? cart.tickets.length : 0);
 
@@ -218,7 +232,7 @@ export default function Cart({ cart, pendingOrder, remainingSeconds, onRemove, o
     modalContent = (
       <>
         <h2 className="text-xl font-bold text-gray-800 mb-4 inline-flex items-center gap-2"><ShoppingCart className="text-green-600" size={22} /> Tu carrito</h2>
-        <CountdownTimer endTime={cartEndTime} warningMessage="Tiempo restante para confirmar" onExpire={handleExpireProxy} />
+        <CountdownTimer endTime={cartEndTime} warningMessage="Tiempo restante para confirmar" />
         <div className="space-y-2 mb-4 max-h-[40vh] overflow-y-auto pr-1">
           {cart.tickets.map((ticket) => (
             <div key={ticket.id} className="flex items-center justify-between bg-white rounded-lg px-4 py-3 shadow-sm border border-amber-100">
