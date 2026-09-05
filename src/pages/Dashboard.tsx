@@ -264,14 +264,20 @@ export default function Dashboard() {
     setCart(null);
     setRemainingSeconds(0);
     
+    // Inmediatamente limpiar visualmente los numeros propios para UX sin latencia (verde instántaneo)
+    if (user?.id) {
+       setTickets(prev => prev.map(t => t.status === 'in_cart' && t.user_id === user.id ? { ...t, status: 'available', user_id: null, user: null } : t));
+    }
+    
     // Explicitly re-fetch the board to get true backend state (this call triggers backend release automatically)
+    // Usamos _t=Date.now() como caché buster porque Safari mobile en iOS cachead agresivamente peticiones GET
     try {
-      const boardData = await api.get<{ raffle: Raffle; tickets: Ticket[] }>(`/raffles/${selectedRaffle.id}/board`);
+      const boardData = await api.get<{ raffle: Raffle; tickets: Ticket[] }>(`/raffles/${selectedRaffle.id}/board?_t=${Date.now()}`);
       setTickets(boardData.tickets);
     } catch (err) {
       console.error('Failed to sync board after expire', err);
     }
-  }, [selectedRaffle]);
+  }, [selectedRaffle, user]);
 
   if (authLoading) return <div className="min-h-screen bg-gradient-to-br from-green-700 via-green-600 to-emerald-700 flex items-center justify-center text-white text-xl">Cargando...</div>;
 
