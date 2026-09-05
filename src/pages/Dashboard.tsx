@@ -295,10 +295,17 @@ export default function Dashboard() {
                       {selectedRaffle ? <span className="inline-flex items-center gap-2">{selectedRaffle.name}{selectedRaffle.prizes && selectedRaffle.prizes.length > 0 && <button onClick={() => setShowPrizes(true)} className="inline-flex items-center gap-1 text-sm font-normal text-yellow-300 hover:text-yellow-100 transition-colors underline decoration-yellow-300/40 hover:decoration-yellow-100/60"><Gift size={16} /> Ver premios</button>}</span> : <span className="inline-flex items-center gap-2"><Target size={20} /> Tablero de números</span>}{isAdmin && <span className="text-sm font-normal text-white/60 ml-2">· <Eye size={16} className="inline" /> Modo visita</span>}
                     </h2>
                     {selectedRaffle?.admin?.whatsapp && (
-                      <div className="flex-grow flex sm:absolute sm:inset-x-0 sm:justify-center justify-center w-full pointer-events-none">
-                        <a href={`https://wa.me/${selectedRaffle.admin.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="pointer-events-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white text-base sm:text-lg font-bold py-2 px-6 rounded-full transition-all duration-300 shadow-[0_0_20px_rgba(34,197,94,0.6)] border border-green-400/50 hover:shadow-[0_0_30px_rgba(34,197,94,0.9)] hover:-translate-y-0.5 whitespace-nowrap group">
-                          <MessageCircle size={22} fill="currentColor" className="text-green-100 group-hover:text-white transition-colors drop-shadow-md" /> {selectedRaffle.admin.whatsapp}
-                        </a>
+                      <div className="flex-grow flex sm:absolute sm:inset-x-0 sm:justify-center justify-center w-full pointer-events-none z-20">
+                        <div className="relative pointer-events-auto group mt-2 sm:mt-0">
+                          <div className="absolute -inset-1.5 bg-gradient-to-r from-green-400 via-yellow-400 to-green-400 rounded-full blur-md opacity-80 animate-pulse"></div>
+                          <a href={`https://wa.me/${selectedRaffle.admin.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="relative flex items-center justify-center gap-3 bg-green-600 hover:bg-green-500 text-white font-black uppercase py-2.5 px-6 rounded-full border-2 border-yellow-300 shadow-[0_0_20px_rgba(250,204,21,0.5)] whitespace-nowrap transition-transform duration-300 transform hover:scale-110">
+                            <MessageCircle size={28} fill="currentColor" className="text-green-100 animate-bounce" style={{ animationDuration: '1.5s' }} />
+                            <div className="flex flex-col items-start leading-4">
+                              <span className="text-base sm:text-lg tracking-wide text-yellow-300 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">¡Obtené tu número YA!</span>
+                              <span className="text-xs sm:text-sm font-bold text-white/90 drop-shadow-sm tracking-wider mt-0.5">{selectedRaffle.admin.whatsapp}</span>
+                            </div>
+                          </a>
+                        </div>
                       </div>
                     )}
                   </div>
