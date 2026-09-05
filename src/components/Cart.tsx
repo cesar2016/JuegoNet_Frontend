@@ -147,7 +147,7 @@ export default function Cart({ cart, pendingOrder, remainingSeconds, onRemove, o
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onClick={handleClick}
-      className={`fixed top-0 left-0 z-40 bg-green-600 hover:bg-green-700 text-white rounded-full p-4 shadow-xl shadow-black/20 cursor-grab active:cursor-grabbing touch-none transition-colors group`}
+      className={`fixed top-0 left-0 z-40 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 rounded-full p-4 shadow-xl shadow-black/20 cursor-grab active:cursor-grabbing touch-none transition-colors group`}
       style={{ willChange: 'transform' }}
     >
       <ShoppingCart size={32} className="group-hover:scale-105 transition-transform" />
@@ -173,26 +173,26 @@ export default function Cart({ cart, pendingOrder, remainingSeconds, onRemove, o
     const countdownEnd = confirmedAt + 15 * 60 * 1000;
     modalContent = (
       <>
-        <h2 className="text-xl font-bold text-gray-800 mb-4 inline-flex items-center gap-2"><ShoppingCart className="text-green-600" size={22} /> Compra confirmada</h2>
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4 text-center">
-          <p className="font-semibold text-yellow-800 inline-flex items-center gap-2"><Hourglass size={20} /> Espera... el Admin está corroborando tu pago!</p>
+        <h2 className="text-xl font-bold text-yellow-900 mb-4 inline-flex items-center gap-2"><ShoppingCart className="text-green-700" size={22} /> Compra confirmada</h2>
+        <div className="bg-white/80 border border-yellow-500 rounded-lg p-4 mb-4 text-center">
+          <p className="font-semibold text-yellow-900 inline-flex items-center gap-2"><Hourglass size={20} /> Espera... el Admin está corroborando tu pago!</p>
         </div>
         <CountdownTimer endTime={countdownEnd} warningMessage="Tiempo restante para validación del Admin" />
         <div className="space-y-2 mb-4 max-h-[40vh] overflow-y-auto pr-1">
           {pendingOrder.tickets.map((ticket) => (
-            <div key={ticket.id} className="flex items-center justify-between bg-yellow-50 rounded-lg px-4 py-2">
-              <span className="font-bold text-lg text-gray-800">N° {ticket.number}</span>
+            <div key={ticket.id} className="flex items-center justify-between bg-white rounded-lg px-4 py-2 shadow-sm">
+              <span className="font-bold text-lg text-yellow-900">N° {ticket.number}</span>
               <span className="text-yellow-700 text-sm font-semibold inline-flex items-center gap-1"><Hourglass size={16} /> Pendiente</span>
             </div>
           ))}
         </div>
-        <div className="border-t border-gray-200 pt-4">
+        <div className="border-t border-yellow-500 pt-4">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-gray-600">Números: {pendingOrder.tickets.length}</span>
-            <span className="text-gray-600">Precio unidad: ${pendingOrder.raffle?.ticket_price ?? '-'}</span>
+            <span className="text-yellow-900 font-medium">Números: {pendingOrder.tickets.length}</span>
+            <span className="text-yellow-900 font-medium">Precio unidad: ${pendingOrder.raffle?.ticket_price ?? '-'}</span>
           </div>
           <div className="flex justify-between items-center text-xl font-bold">
-            <span className="text-gray-800">Total</span>
+            <span className="text-yellow-900">Total</span>
             <span className="text-green-700">${parseFloat(pendingOrder.total_price).toLocaleString('es-AR')}</span>
           </div>
         </div>
@@ -201,36 +201,41 @@ export default function Cart({ cart, pendingOrder, remainingSeconds, onRemove, o
   } else if (!cart || cart.tickets.length === 0) {
     modalContent = (
       <>
-        <h2 className="text-xl font-bold text-gray-800 mb-4 inline-flex items-center gap-2"><ShoppingCart className="text-green-600" size={22} /> Tu carrito</h2>
-        <p className="text-gray-500 text-center py-12">No has seleccionado ningún número del tablero por ahora.</p>
+        <h2 className="text-xl font-bold text-yellow-900 mb-4 inline-flex items-center gap-2"><ShoppingCart className="text-green-700" size={22} /> Tu carrito</h2>
+        <p className="text-yellow-800 font-medium text-center py-12">No has seleccionado ningún número del tablero por ahora.</p>
       </>
     );
   } else {
     modalContent = (
       <>
-        <h2 className="text-xl font-bold text-gray-800 mb-4 inline-flex items-center gap-2"><ShoppingCart className="text-green-600" size={22} /> Tu carrito</h2>
+        <h2 className="text-xl font-bold text-yellow-900 mb-4 inline-flex items-center gap-2"><ShoppingCart className="text-green-700" size={22} /> Tu carrito</h2>
         <CountdownTimer endTime={cartEndTime} warningMessage="Tiempo restante para confirmar" onExpire={onExpire} />
         <div className="space-y-2 mb-4 max-h-[40vh] overflow-y-auto pr-1">
           {cart.tickets.map((ticket) => (
-            <div key={ticket.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3 shadow-sm border border-gray-100">
-              <span className="font-bold text-xl text-gray-800 w-16">N° {ticket.number}</span>
+            <div key={ticket.id} className="flex items-center justify-between bg-white rounded-lg px-4 py-3 shadow-sm border border-yellow-200">
+              <span className="font-bold text-xl text-yellow-900 w-16">N° {ticket.number}</span>
               <button onClick={() => onRemove(ticket.id)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg text-sm font-semibold inline-flex items-center gap-1 transition-colors"><Trash2 size={18} /> Quitar</button>
             </div>
           ))}
         </div>
-        <div className="border-t border-gray-200 pt-4 mb-4">
+        <div className="border-t border-yellow-500 pt-4 mb-4">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-gray-600">Números: {cart.tickets.length}</span>
-            <span className="text-gray-600">Precio unidad: ${cart.raffle?.ticket_price ?? '-'}</span>
+            <span className="text-yellow-900 font-medium">Números: {cart.tickets.length}</span>
+            <span className="text-yellow-900 font-medium">Precio unidad: ${cart.raffle?.ticket_price ?? '-'}</span>
           </div>
           <div className="flex justify-between items-center text-2xl font-bold">
-            <span className="text-gray-800">Total</span>
+            <span className="text-yellow-900">Total</span>
             <span className="text-green-700">${parseFloat(cart.total_price).toLocaleString('es-AR')}</span>
           </div>
         </div>
-        <button onClick={() => setShowConfirm(true)} disabled={loading} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 text-lg rounded-xl transition disabled:opacity-50 shadow-lg shadow-green-600/30">
-          {loading ? 'Confirmando...' : <span className="inline-flex items-center gap-2"><Check size={20} /> Confirmar Compra</span>}
-        </button>
+        <div className="flex gap-3">
+          <button onClick={() => setIsOpen(false)} className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-yellow-900 font-bold py-3 text-base sm:text-lg rounded-xl transition shadow-lg shadow-yellow-600/20">
+            Elegir otro
+          </button>
+          <button onClick={() => setShowConfirm(true)} disabled={loading} className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 text-base sm:text-lg rounded-xl transition disabled:opacity-50 shadow-lg shadow-green-600/30">
+            {loading ? 'Cargando...' : <span className="inline-flex items-center justify-center gap-2"><Check size={20} /> Aceptar</span>}
+          </button>
+        </div>
 
         {showConfirm && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowConfirm(false)}>
@@ -259,8 +264,8 @@ export default function Cart({ cart, pendingOrder, remainingSeconds, onRemove, o
     <>
       {Bubble}
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 sm:p-6" onClick={() => setIsOpen(false)}>
-        <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md mx-auto relative flex flex-col max-h-full" onClick={(e) => e.stopPropagation()}>
-           <button onClick={() => setIsOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition p-1 hover:bg-gray-100 rounded-full">
+        <div className="bg-yellow-400 rounded-2xl shadow-2xl p-6 w-full max-w-md mx-auto relative flex flex-col max-h-full" onClick={(e) => e.stopPropagation()}>
+           <button onClick={() => setIsOpen(false)} className="absolute top-4 right-4 text-yellow-800 hover:text-yellow-900 transition p-1 hover:bg-yellow-500 rounded-full">
              <X size={24} />
            </button>
            {modalContent}
