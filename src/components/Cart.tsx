@@ -75,6 +75,11 @@ export default function Cart({ cart, pendingOrder, remainingSeconds, onRemove, o
   const [cartEndTime, setCartEndTime] = useState(() => Date.now() + remainingSeconds * 1000);
   
   const [isOpen, setIsOpen] = useState(false);
+
+  const handleExpireProxy = () => {
+    setIsOpen(false);
+    onExpire();
+  };
   const bubbleRef = useRef<HTMLDivElement>(null);
   const pos = useRef({ x: window.innerWidth - 80, y: window.innerHeight - 100 });
   const isDragging = useRef(false);
@@ -209,7 +214,7 @@ export default function Cart({ cart, pendingOrder, remainingSeconds, onRemove, o
     modalContent = (
       <>
         <h2 className="text-xl font-bold text-gray-800 mb-4 inline-flex items-center gap-2"><ShoppingCart className="text-green-600" size={22} /> Tu carrito</h2>
-        <CountdownTimer endTime={cartEndTime} warningMessage="Tiempo restante para confirmar" onExpire={onExpire} />
+        <CountdownTimer endTime={cartEndTime} warningMessage="Tiempo restante para confirmar" onExpire={handleExpireProxy} />
         <div className="space-y-2 mb-4 max-h-[40vh] overflow-y-auto pr-1">
           {cart.tickets.map((ticket) => (
             <div key={ticket.id} className="flex items-center justify-between bg-white rounded-lg px-4 py-3 shadow-sm border border-amber-100">
