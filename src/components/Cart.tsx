@@ -41,6 +41,10 @@ function CountdownTimer({ endTime, warningMessage, onExpire }: { endTime: number
     const remaining = calcRemaining();
     setTimeLeft(remaining);
     if (remaining <= 0) {
+      if (!expiredRef.current) {
+        expiredRef.current = true;
+        onExpire?.();
+      }
       return;
     }
     const id = setInterval(() => {

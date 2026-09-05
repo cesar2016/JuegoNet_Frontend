@@ -263,10 +263,15 @@ export default function Dashboard() {
     if (!selectedRaffle) return;
     setCart(null);
     setRemainingSeconds(0);
-    setTickets(prev => prev.map(t => t.status === 'in_cart' && t.user_id === user!.id ? { ...t, status: 'available', user_id: null, user: null } : t));
-    // Trigger backend to release expired tickets (ignore response — broadcasts handle the rest)
-    api.get(`/raffles/${selectedRaffle.id}/board`).catch(() => {});
-  }, [selectedRaffle, user]);
+    
+    // Explicitly re-fetch the board to get true backend state (this call triggers backend release automatically)
+    try {
+      const boardData = await api.get<{ raffle: Raffle; tickets: Ticket[] }>(`/raffles/${selectedRaffle.id}/board`);
+      setTickets(boardData.tickets);
+    } catch (err) {
+      console.error('Failed to sync board after expire', err);
+    }
+  }, [selectedRaffle]);
 
   if (authLoading) return <div className="min-h-screen bg-gradient-to-br from-green-700 via-green-600 to-emerald-700 flex items-center justify-center text-white text-xl">Cargando...</div>;
 
