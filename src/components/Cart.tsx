@@ -141,25 +141,9 @@ export default function Cart({ cart, pendingOrder, remainingSeconds, onRemove, o
     if (pendingOrder) setIsOpen(true);
   }, [cart?.tickets.length, pendingOrder?.id]);
 
-  // Background timer to ensure cart expires even if the modal is closed and unmounted
-  useEffect(() => {
-    if (!cart || cart.tickets.length === 0) return;
-    
-    const checkExpiration = () => {
-      if (Date.now() >= cartEndTime) {
-        setIsOpen(false);
-        onExpire();
-      }
-    };
-
-    if (Date.now() >= cartEndTime) {
-       checkExpiration();
-       return;
-    }
-
-    const id = setInterval(checkExpiration, 1000);
-    return () => clearInterval(id);
-  }, [cartEndTime, cart?.tickets.length, onExpire]);
+  // Eliminamos el setInterval inestable que sufre de stale closures o fallos de React rendering
+  // y delegamos la expiración al fiable CountdownTimer nuevamente.
+  // Para que el CountdownTimer viva siempre, lo renderizaremos SIEMPRE en Cart.tsx aunque esté invisible.
 
   const itemCount = pendingOrder ? pendingOrder.tickets.length : (cart ? cart.tickets.length : 0);
 
@@ -182,10 +166,24 @@ export default function Cart({ cart, pendingOrder, remainingSeconds, onRemove, o
     </div>
   );
 
+  const handleExpireProxy = () => {
+    setIsOpen(false);
+    onExpire();
+  };
+
+  const hiddenTimer = cart && cart.tickets.length > 0 && !isOpen ? (
+    <div className="hidden">
+      <CountdownTimer endTime={cartEndTime} warningMessage="" onExpire={handleExpireProxy} />
+    </div>
+  ) : null;
+
   if (!isOpen) {
-    // Only show bubble if we have items or empty cart icon doesn't take much space. 
-    // Usually even empty cart bubble is good for a consistent UX.
-    return Bubble;
+    return (
+      <>
+        {Bubble}
+        {hiddenTimer}
+      </>
+    );
   }
 
   // Inside Modal Renderer
@@ -232,7 +230,7 @@ export default function Cart({ cart, pendingOrder, remainingSeconds, onRemove, o
     modalContent = (
       <>
         <h2 className="text-xl font-bold text-gray-800 mb-4 inline-flex items-center gap-2"><ShoppingCart className="text-green-600" size={22} /> Tu carrito</h2>
-        <CountdownTimer endTime={cartEndTime} warningMessage="Tiempo restante para confirmar" />
+        <CountdownTimer endTime={cartEndTime} warningMessage="Tiempo restante para confirmar" onExpire={handleExpireProxy} />
         <div className="space-y-2 mb-4 max-h-[40vh] overflow-y-auto pr-1">
           {cart.tickets.map((ticket) => (
             <div key={ticket.id} className="flex items-center justify-between bg-white rounded-lg px-4 py-3 shadow-sm border border-amber-100">
