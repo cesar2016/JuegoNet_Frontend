@@ -77,6 +77,15 @@ function CountdownTimer({ endTime, warningMessage, onExpire }: { endTime: number
 export default function Cart({ cart, pendingOrder, remainingSeconds, onRemove, onConfirm, onExpire, loading }: CartProps) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [cartEndTime, setCartEndTime] = useState(() => Date.now() + remainingSeconds * 1000);
+  const [prevRemaining, setPrevRemaining] = useState(remainingSeconds);
+  const cartSig = cart ? cart.tickets.map(t => t.id).join(',') : '';
+  const [prevCartSig, setPrevCartSig] = useState(cartSig);
+
+  if (remainingSeconds !== prevRemaining || cartSig !== prevCartSig) {
+    setPrevRemaining(remainingSeconds);
+    setPrevCartSig(cartSig);
+    setCartEndTime(Date.now() + Math.max(0, remainingSeconds) * 1000);
+  }
   
   const [isOpen, setIsOpen] = useState(false);
   const bubbleRef = useRef<HTMLDivElement>(null);
@@ -84,10 +93,6 @@ export default function Cart({ cart, pendingOrder, remainingSeconds, onRemove, o
   const isDragging = useRef(false);
   const dragStart = useRef({ x: 0, y: 0 });
   const initPos = useRef({ x: 0, y: 0 });
-
-  useEffect(() => {
-    setCartEndTime(Date.now() + remainingSeconds * 1000);
-  }, [remainingSeconds]);
 
   useEffect(() => {
     pos.current = { x: Math.max(20, window.innerWidth - 80), y: Math.max(20, window.innerHeight - 100) };
