@@ -315,7 +315,12 @@ export default function Dashboard() {
                           <MessageCircle size={28} fill="currentColor" className="text-green-100 animate-bounce" style={{ animationDuration: '1.5s' }} />
                           <div className="flex flex-col items-start leading-4 text-left">
                             <span className="text-sm sm:text-lg tracking-wide text-yellow-300 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">¡Obtené tu número YA!</span>
-                            <span className="text-[10px] sm:text-sm font-bold text-white/90 drop-shadow-sm tracking-wider mt-0.5">{selectedRaffle.admin.whatsapp}</span>
+                            <div className="flex items-center gap-3 mt-0.5">
+                              <span className="text-[10px] sm:text-sm font-bold text-white/90 drop-shadow-sm tracking-wider">{selectedRaffle.admin.whatsapp}</span>
+                              <span className="text-[11px] sm:text-[13px] font-black text-yellow-100 bg-black/20 px-2 py-0.5 rounded-md shadow-inner border border-white/10">
+                                Valor: ${parseFloat(selectedRaffle.ticket_price).toLocaleString('es-AR')}
+                              </span>
+                            </div>
                           </div>
                         </a>
                       </div>
